@@ -211,6 +211,22 @@ export function collectWarnings(current) {
       message: 'NISA運用がOFFのため、NISA資産も課税口座として扱われます。',
     });
   }
+  if (current.housingEnabled && current.housingPurchase) {
+    const duplicated = current.events.find((event) => /住宅|マイホーム|家|住居/.test(event.name));
+    if (duplicated) {
+      warnings.push({
+        field: 'housingEnabled',
+        message: `住居費を試算中のため、ライフイベント「${duplicated.name}」と二重計上になっていないかご確認ください。`,
+      });
+    }
+    if (current.housingDownPayment + current.housingFees > current.assetCash + current.assetNisa + current.assetStock + current.assetOther) {
+      warnings.push({
+        field: 'housingDownPayment',
+        message: '頭金と諸費用の合計が現在の総資産を上回っています。購入時までの積立で賄える前提で試算します。',
+      });
+    }
+  }
+
   const horizon = current.deathAge - current.currentAge;
   current.events.forEach((event) => {
     if (event.year > horizon) {

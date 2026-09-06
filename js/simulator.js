@@ -15,9 +15,13 @@
  *    含み益に相当する部分にのみ 20.315% を課す（毎年課税する簡易法より実態に近い）。
  * 3. 取り崩し順序は 現金 → 課税株式 → その他 → NISA。
  *    非課税枠の複利を最後まで温存するのが税効率上有利なため。
- * 4. 金額の単位はすべて「万円」、率は小数（0.05 = 5%）で扱う。
+ * 4. 住居費（家賃・住宅ローン・維持費）は housing.js が独立した支出ストリームとして
+ *    供給する。月間固定費とは別枠のため、リタイア後の取り崩し額を逆算する際も
+ *    非裁量支出として正しく積み上がる。
+ * 5. 金額の単位はすべて「万円」、率は小数（0.05 = 5%）で扱う。
  */
 
+import { buildHousingPlan } from './housing.js';
 import {
   TAX_RATE,
   NISA_LIFETIME_LIMIT,
@@ -46,11 +50,13 @@ export function normalizeInput(state) {
   const currentAge = state.currentAge;
   const deathAge = Math.max(currentAge + 1, state.deathAge);
   const nisaEnabled = Boolean(state.nisaEnabled);
+  const horizon = deathAge - currentAge;
+  const inflation = state.inflationEnabled ? state.inflationRate / 100 : 0;
 
   return {
     currentAge,
     deathAge,
-    horizon: deathAge - currentAge,
+    horizon,
 
     baseAnnualIncome: state.monthlyIncome * 12 + state.annualBonus,
     baseAnnualExpense:
@@ -67,13 +73,15 @@ export function normalizeInput(state) {
     baseYieldStock: state.yieldStock / 100,
     baseYieldOther: state.yieldOther / 100,
 
-    inflation: state.inflationEnabled ? state.inflationRate / 100 : 0,
+    inflation,
     salaryGrowth: state.salaryGrowthEnabled ? state.salaryGrowthRate / 100 : 0,
     taxRate: state.taxEnabled ? TAX_RATE : 0,
     nisaEnabled,
 
     fireType: state.fireType,
     retireOnFire: Boolean(state.retireOnFire),
+
+    housing: buildHousingPlan(state, inflation, horizon),
 
     // 想定寿命を超えるイベントは試算対象外（警告は state.collectWarnings が担当）
     events: state.events
@@ -249,9 +257,12 @@ export function project(p, cfg) {
 
     // --- FIRE判定（その年の期首資産で評価する） ---
     const baseExpense = (spendingReal ?? p.baseAnnualExpense) * inflationFactor;
+    // 目標額の基準となる生活費には、住居費の経常分（家賃 or ローン返済＋維持費）も含める。
+    // 頭金などの一時費用は継続的な支出ではないため除外する。
+    const targetBasis = baseExpense + p.housing.costAt(year, inflationFactor).recurring;
     const target = calcFireTarget(
       p.fireType,
-      baseExpense,
+      targetBasis,
       effectiveYield(buckets, yieldStock, yieldOther, p.taxRate),
     );
 
@@ -276,17 +287,23 @@ export function project(p, cfg) {
       if (!retired) {
         laborIncome = p.baseAnnualIncome * salaryFactor;
       } else if (p.fireType === 'side') {
-        // サイドFIRE: 生活費の50%を軽い労働で賄い続ける
-        laborIncome = baseExpense * (FIRE_TYPES.side.ratio ?? 0.5);
+        // サイドFIRE: 生活費（住居費の経常分を含む）の50%を軽い労働で賄い続ける
+        const livingCost = baseExpense + p.housing.costAt(year, inflationFactor).recurring;
+        laborIncome = livingCost * (FIRE_TYPES.side.ratio ?? 0.5);
       }
     }
     const pensionIncome = age >= PENSION_START_AGE ? p.annualPension * inflationFactor : 0;
-    const income = laborIncome + pensionIncome;
+
+    // --- 住居費（家賃 or ローン返済＋維持費）と住宅ローン控除 ---
+    const housing = p.housing.costAt(year, inflationFactor);
+    const housingCost = housing.recurring + housing.oneTime;
+
+    const income = laborIncome + pensionIncome + housing.deduction;
 
     // --- 支出 ---
     const yearEvents = p.events.filter((event) => event.year === year);
     const eventsCost = yearEvents.reduce((sum, event) => sum + event.cost * inflationFactor, 0);
-    const expenses = baseExpense + eventsCost;
+    const expenses = baseExpense + eventsCost + housingCost;
 
     // --- 運用（期首資産を1年運用してから当年のキャッシュフローを充当） ---
     const realized = realizedYield ? realizedYield(year) : { stock: yieldStock, other: yieldOther };
@@ -325,8 +342,11 @@ export function project(p, cfg) {
         startNetWorth: startNet,
         laborIncome,
         pensionIncome,
+        housingDeduction: housing.deduction,
         income,
         baseExpense,
+        housingCost,
+        housingOneTime: housing.oneTime,
         eventsCost,
         eventNames: yearEvents.map((event) => event.name),
         netFlow,
@@ -422,11 +442,15 @@ export function runSimulation(state) {
   const p = normalizeInput(state);
 
   const totalAssets = p.assetCash + p.assetNisa + p.assetStock + p.assetOther;
-  const annualInvestable = p.baseAnnualIncome - p.baseAnnualExpense;
+  // 初年度の住居費（経常分）は「今の生活コスト」に含めて投資可能額を算出する
+  const currentHousingCost = p.housing.costAt(0, 1).recurring;
+  const annualInvestable = p.baseAnnualIncome - p.baseAnnualExpense - currentHousingCost;
   const derived = {
     totalAssets,
     annualIncome: p.baseAnnualIncome,
-    annualExpense: p.baseAnnualExpense,
+    annualExpense: p.baseAnnualExpense + currentHousingCost,
+    housingCost: currentHousingCost,
+    housingPlan: p.housing,
     annualInvestable,
     monthlyInvestable: annualInvestable / 12,
     savingsRate: p.baseAnnualIncome > 0 ? annualInvestable / p.baseAnnualIncome : 0,

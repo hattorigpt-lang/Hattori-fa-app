@@ -5,7 +5,7 @@
 
 import { PRESET_EVENTS } from './config.js';
 import {
-  getState, subscribe, replace, reset, addEvent, replaceEvents, sanitizeState,
+  getState, subscribe, replace, reset, addEvent, replaceEvents, sanitizeState, patch,
 } from './state.js';
 import { runSimulation } from './simulator.js';
 import { runMonteCarlo } from './montecarlo.js';
@@ -23,6 +23,7 @@ import { renderScenarioTable, renderTimeline, initTimeline } from './ui/tables.j
 import { initChart, renderChart } from './ui/chart.js';
 import { renderMonteCarlo } from './ui/montecarlo.js';
 import { renderSensitivity } from './ui/sensitivity.js';
+import { renderHousing } from './ui/housing.js';
 
 let renderHandle = null;
 let latestResult = null;
@@ -53,7 +54,8 @@ function render() {
   syncInputs(state);
   renderEvents(state);
   renderAssetSummary(state);
-  renderExpenseSummary(state);
+  renderExpenseSummary(state, result.derived);
+  renderHousing(state, result.derived.housingPlan);
 
   renderKpi(result);
   renderAlerts(state, result);
@@ -147,6 +149,19 @@ function initActions() {
       input?.focus();
       input?.select();
     });
+  });
+
+  // 家賃の二重計上は自動では直さず、利用者が明示的に実行したときだけ反映する
+  $('#deduct-rent-btn')?.addEventListener('click', () => {
+    const state = getState();
+    const rent = state.housingRentMonthly;
+    if (rent <= 0) {
+      showToast('家賃が0のため、差し引く金額がありません');
+      return;
+    }
+    const next = Math.max(0, state.monthlyFixed - rent);
+    patch({ monthlyFixed: next });
+    showToast(`月間固定費を ${state.monthlyFixed} → ${next} 万円に変更しました`);
   });
 
   $('#preset-btn')?.addEventListener('click', () => {

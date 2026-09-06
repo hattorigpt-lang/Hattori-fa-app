@@ -77,6 +77,33 @@ const LEVERS = [
     read: (state) => `${state.events.reduce((sum, event) => sum + event.cost, 0)} 万円`,
   },
   {
+    key: 'housingPrice',
+    label: '物件価格',
+    kind: 'ratio',
+    apply: (state, factor) => ({ ...state, housingPrice: state.housingPrice * factor }),
+    read: (state) => `${state.housingPrice} 万円`,
+    requires: (state) => state.housingEnabled && state.housingPurchase,
+  },
+  {
+    key: 'housingRentMonthly',
+    label: '家賃（購入までの住居費）',
+    kind: 'ratio',
+    apply: (state, factor) => ({ ...state, housingRentMonthly: state.housingRentMonthly * factor }),
+    read: (state) => `${state.housingRentMonthly} 万円 / 月`,
+    requires: (state) => state.housingEnabled,
+  },
+  {
+    key: 'housingLoanRate',
+    label: '住宅ローン金利',
+    kind: 'rate',
+    apply: (state, delta) => ({
+      ...state,
+      housingLoanRate: Math.max(0, state.housingLoanRate + delta),
+    }),
+    read: (state) => `${state.housingLoanRate} %`,
+    requires: (state) => state.housingEnabled && state.housingPurchase,
+  },
+  {
     key: 'yieldStock',
     label: '期待利回り',
     kind: 'rate',

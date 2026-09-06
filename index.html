@@ -44,6 +44,7 @@
     <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></symbol>
     <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4.5L21 19.5H3z"/><path d="M12 10v4M12 17h.01"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 10.5L12 3.5l8.5 7"/><path d="M5.5 9.8V20h13V9.8"/><path d="M10 20v-5.5h4V20"/></symbol>
     <symbol id="i-tornado" viewBox="0 0 24 24"><path d="M4 5.5h16M6 10h12M8.5 14.5h7M11 19h2"/></symbol>
     <symbol id="i-dice" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><circle cx="8.5" cy="8.5" r="1.1"/><circle cx="15.5" cy="15.5" r="1.1"/><circle cx="12" cy="12" r="1.1"/></symbol>
     <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 4.5h11L19.5 8v11.5a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-14a1 1 0 0 1 1-1z"/><path d="M8 4.5v5h7M8 20.5v-5h8v5"/></symbol>
@@ -265,9 +266,157 @@
             </div>
           </div>
 
-          <!-- 4. FIRE目標と条件 -->
+          <!-- 4. 住居費 -->
           <div class="section">
-            <h3 class="section__title"><svg class="icon"><use href="#i-target"/></svg>4. FIRE目標とシミュレーション条件</h3>
+            <h3 class="section__title"><svg class="icon"><use href="#i-home"/></svg>4. 住居費（家賃・住宅ローン）</h3>
+
+            <div class="option-group">
+              <div class="switch-row">
+                <span class="switch-row__label">
+                  <svg class="icon text-brand"><use href="#i-home"/></svg>住居費を独立して試算する
+                </span>
+                <div class="switch-row__controls">
+                  <label class="switch">
+                    <input type="checkbox" data-field="housingEnabled" aria-label="住居費を独立して試算する">
+                    <span class="switch__track"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div id="housing-detail" class="stack-3 mt-3" hidden>
+              <div class="alert" id="rent-overlap-alert" hidden>
+                <svg class="icon"><use href="#i-info"/></svg>
+                <div class="stack-2" style="min-width:0">
+                  <span>
+                    二重計上を防ぐため、上の「月間固定費」からは<strong>家賃を除いて</strong>入力してください。
+                    現在の月間固定費（<span id="rent-overlap-fixed">—</span>）は家賃（<span id="rent-overlap-rent">—</span>）以上のため、
+                    家賃が含まれたままの可能性があります。
+                  </span>
+                  <button type="button" id="deduct-rent-btn" class="btn" style="align-self:flex-start">
+                    <svg class="icon"><use href="#i-check"/></svg>月間固定費から家賃を差し引く
+                  </button>
+                </div>
+              </div>
+
+              <div class="field-grid">
+                <div class="field field--span2" data-field-wrap="housingRentMonthly">
+                  <label class="field__label" for="in-rent">現在の家賃（管理費・駐車場込の月額）</label>
+                  <div class="field__control">
+                    <input class="field__input" type="number" id="in-rent" data-field="housingRentMonthly" inputmode="decimal">
+                    <span class="field__suffix">万円 / 月</span>
+                  </div>
+                  <p class="field__error"></p>
+                </div>
+              </div>
+
+              <div class="option-group">
+                <div class="switch-row">
+                  <span class="switch-row__label">
+                    <svg class="icon text-indigo"><use href="#i-home"/></svg>住宅を購入する
+                  </span>
+                  <div class="switch-row__controls">
+                    <label class="switch">
+                      <input type="checkbox" data-field="housingPurchase" aria-label="住宅を購入する">
+                      <span class="switch__track"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div id="housing-purchase-detail" class="stack-3">
+                <div class="field-grid">
+                  <div class="field" data-field-wrap="housingYear">
+                    <label class="field__label" for="in-housing-year">購入時期</label>
+                    <div class="field__control">
+                      <input class="field__input" type="number" id="in-housing-year" data-field="housingYear" inputmode="numeric">
+                      <span class="field__suffix">年後</span>
+                    </div>
+                    <p class="field__error"></p>
+                  </div>
+                  <div class="field" data-field-wrap="housingPrice">
+                    <label class="field__label" for="in-housing-price">物件価格</label>
+                    <div class="field__control">
+                      <input class="field__input" type="number" id="in-housing-price" data-field="housingPrice" inputmode="decimal" step="100">
+                      <span class="field__suffix">万円</span>
+                    </div>
+                    <p class="field__error"></p>
+                  </div>
+                  <div class="field" data-field-wrap="housingDownPayment">
+                    <label class="field__label" for="in-housing-down">頭金</label>
+                    <div class="field__control">
+                      <input class="field__input" type="number" id="in-housing-down" data-field="housingDownPayment" inputmode="decimal" step="50">
+                      <span class="field__suffix">万円</span>
+                    </div>
+                    <p class="field__error"></p>
+                  </div>
+                  <div class="field" data-field-wrap="housingFees">
+                    <label class="field__label" for="in-housing-fees">購入諸費用</label>
+                    <div class="field__control">
+                      <input class="field__input" type="number" id="in-housing-fees" data-field="housingFees" inputmode="decimal" step="10">
+                      <span class="field__suffix">万円</span>
+                    </div>
+                    <p class="field__error"></p>
+                  </div>
+                  <div class="field" data-field-wrap="housingLoanRate">
+                    <label class="field__label" for="in-housing-rate">住宅ローン金利</label>
+                    <div class="field__control">
+                      <input class="field__input" type="number" id="in-housing-rate" data-field="housingLoanRate" inputmode="decimal" step="0.1">
+                      <span class="field__suffix">%</span>
+                    </div>
+                    <p class="field__error"></p>
+                  </div>
+                  <div class="field" data-field-wrap="housingLoanYears">
+                    <label class="field__label" for="in-housing-years">返済年数</label>
+                    <div class="field__control">
+                      <input class="field__input" type="number" id="in-housing-years" data-field="housingLoanYears" inputmode="numeric">
+                      <span class="field__suffix">年</span>
+                    </div>
+                    <p class="field__error"></p>
+                  </div>
+                  <div class="field field--span2" data-field-wrap="housingUpkeepAnnual">
+                    <label class="field__label" for="in-housing-upkeep">維持費（管理費・修繕積立・固定資産税）</label>
+                    <div class="field__control">
+                      <input class="field__input" type="number" id="in-housing-upkeep" data-field="housingUpkeepAnnual" inputmode="decimal" step="5">
+                      <span class="field__suffix">万円 / 年</span>
+                    </div>
+                    <p class="field__error"></p>
+                  </div>
+                </div>
+
+                <div class="option-group">
+                  <div class="switch-row">
+                    <span class="switch-row__label">
+                      <svg class="icon text-emerald"><use href="#i-check"/></svg>住宅ローン控除を適用（13年・0.7%）
+                    </span>
+                    <div class="switch-row__controls">
+                      <label class="switch">
+                        <input type="checkbox" data-field="housingDeduction" aria-label="住宅ローン控除を適用する">
+                        <span class="switch__track"></span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="total-bar">
+                  <div class="total-bar__row">
+                    <span>毎月の返済額</span>
+                    <span class="total-bar__value num" id="housing-monthly">—</span>
+                  </div>
+                  <dl class="housing-summary">
+                    <div><dt>借入額</dt><dd class="num" id="housing-loan">—</dd></div>
+                    <div><dt>総返済額</dt><dd class="num" id="housing-total">—</dd></div>
+                    <div><dt>うち利息</dt><dd class="num" id="housing-interest">—</dd></div>
+                    <div><dt>ローン控除の総額</dt><dd class="num" id="housing-deduction">—</dd></div>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. FIRE目標と条件 -->
+          <div class="section">
+            <h3 class="section__title"><svg class="icon"><use href="#i-target"/></svg>5. FIRE目標とシミュレーション条件</h3>
 
             <div class="field" style="margin-bottom:var(--sp-4)">
               <label class="field__label" for="in-fire-type">FIRE目標タイプ</label>
@@ -348,7 +497,7 @@
 
           <!-- 5. モンテカルロ分析 -->
           <div class="section">
-            <h3 class="section__title"><svg class="icon"><use href="#i-dice"/></svg>5. リターンの不確実性（モンテカルロ）</h3>
+            <h3 class="section__title"><svg class="icon"><use href="#i-dice"/></svg>6. リターンの不確実性（モンテカルロ）</h3>
             <div class="option-group">
               <div class="switch-row">
                 <span class="switch-row__label">
@@ -564,13 +713,14 @@
           <span class="collapse__indicator"><span id="timeline-toggle-text">表示する</span><svg class="icon"><use href="#i-chevron"/></svg></span>
         </button>
         <div class="table-scroll timeline-scroll" id="timeline-panel" hidden>
-          <table class="data-table">
+          <table class="data-table" id="timeline-table" data-housing="off">
             <thead>
               <tr>
                 <th scope="col">年齢</th>
                 <th scope="col">経過</th>
                 <th scope="col" class="is-numeric">収入</th>
                 <th scope="col" class="is-numeric">基本支出</th>
+                <th scope="col" class="is-numeric col-housing">住居費</th>
                 <th scope="col" class="is-numeric">イベント</th>
                 <th scope="col" class="is-numeric">収支</th>
                 <th scope="col" class="is-numeric">年末資産（時価）</th>
@@ -594,6 +744,8 @@
             <li><svg class="icon"><use href="#i-check"/></svg><span><strong>取り崩し順序</strong>は 現金 → 課税口座 → その他 → NISA。非課税の複利を最後まで温存する順序です。</span></li>
             <li><svg class="icon"><use href="#i-check"/></svg><span><strong>FIRE達成判定</strong>は、含み益への将来の税負担を差し引いた「税引後の実質資産」で行います。</span></li>
             <li><svg class="icon"><use href="#i-check"/></svg><span><strong>「リタイア後に使える月額」</strong>は、想定寿命の時点で資産がちょうど尽きる水準を逆算した値で、今日の物価に換算しています。</span></li>
+            <li><svg class="icon"><use href="#i-check"/></svg><span><strong>住宅ローンの返済額は名目固定</strong>として扱い、インフレでは増えません（実質負担が年々軽くなる効果を再現）。一方、物件価格・頭金・諸費用は購入年までインフレで上昇します。</span></li>
+            <li><svg class="icon"><use href="#i-check"/></svg><span><strong>購入した住宅は金融資産に含めません。</strong>売却して生活費に充てられる資産ではないため、含めるとFIRE達成を過大評価するためです。</span></li>
             <li><svg class="icon"><use href="#i-alert"/></svg><span>本ツールは概算であり、将来の運用成果・税制・社会保障制度を保証するものではありません。投資判断はご自身の責任でお願いします。</span></li>
           </ul>
         </div>

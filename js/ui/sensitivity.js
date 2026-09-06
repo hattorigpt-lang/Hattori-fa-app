@@ -55,6 +55,13 @@ function row(item, maxDelta) {
   </div>`;
 }
 
+const NO_IMPACT_THRESHOLD = 0.05;
+
+const EMPTY_MESSAGE = `<p class="tornado__empty">
+  現在の条件では、いずれの変数を動かしても想定寿命内にFIREへ到達しません。
+  支出・収入・FIRE目標タイプのいずれかを見直したうえで、あらためてご確認ください。
+</p>`;
+
 export function renderSensitivity(sensitivity, standard) {
   const baselineNode = $('#sens-baseline');
   if (standard.achieved) {
@@ -64,6 +71,13 @@ export function renderSensitivity(sensitivity, standard) {
     );
   } else {
     setText(baselineNode, '基準: 想定寿命内に未達成');
+  }
+
+  // どの変数を振っても達成年が動かない場合、棒がすべてゼロ幅になり
+  // 「分析が壊れている」ように見えるため、理由を明示する
+  if (!standard.achieved && sensitivity.maxDelta < NO_IMPACT_THRESHOLD) {
+    setHtml($('#tornado'), EMPTY_MESSAGE);
+    return;
   }
 
   setHtml($('#tornado'), sensitivity.items.map((item) => row(item, sensitivity.maxDelta)).join(''));

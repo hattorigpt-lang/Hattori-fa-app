@@ -52,6 +52,17 @@ export const FIRE_TYPES = {
 /** 資産の取り崩し順序。非課税枠は複利を最大化するため最後に温存する。 */
 export const WITHDRAWAL_ORDER = ['cash', 'taxable', 'other', 'nisa'];
 
+/* --- 住宅ローン --- */
+
+/** 住宅ローン控除の控除率（年末残高に対して）。 */
+export const HOUSING_DEDUCTION_RATE = 0.007;
+
+/** 住宅ローン控除の適用年数（新築・認定住宅等）。 */
+export const HOUSING_DEDUCTION_YEARS = 13;
+
+/** 住宅ローン控除の対象となる借入限度額（万円）。制度上の名目額のためインフレ調整しない。 */
+export const HOUSING_DEDUCTION_LOAN_CAP = 3000;
+
 /* --- モンテカルロ分析 --- */
 
 /** 株式の年間ボラティリティ（標準偏差）の既定値。先進国株式の長期実績に近い水準。 */
@@ -114,6 +125,18 @@ export const DEFAULT_STATE = Object.freeze({
   taxEnabled: true,
   nisaEnabled: true,
 
+  housingEnabled: false,
+  housingPurchase: true,
+  housingRentMonthly: 9,
+  housingYear: 7,
+  housingPrice: 3500,
+  housingDownPayment: 400,
+  housingFees: 150,
+  housingLoanRate: 1.0,
+  housingLoanYears: 35,
+  housingUpkeepAnnual: 30,
+  housingDeduction: true,
+
   monteCarloEnabled: true,
   volatility: DEFAULT_VOLATILITY,
   trials: 1000,
@@ -155,6 +178,14 @@ export const FIELD_RULES = {
   annualVar: { min: 0, max: 10000, label: '年間変動費' },
   inflationRate: { min: -5, max: 10, label: 'インフレ率' },
   salaryGrowthRate: { min: -10, max: 10, label: '昇給率' },
+  housingRentMonthly: { min: 0, max: 200, label: '家賃' },
+  housingYear: { min: 0, max: 60, integer: true, label: '購入時期' },
+  housingPrice: { min: 0, max: 100000, label: '物件価格' },
+  housingDownPayment: { min: 0, max: 100000, label: '頭金' },
+  housingFees: { min: 0, max: 10000, label: '購入諸費用' },
+  housingLoanRate: { min: 0, max: 10, label: '住宅ローン金利' },
+  housingLoanYears: { min: 1, max: 50, integer: true, label: '返済年数' },
+  housingUpkeepAnnual: { min: 0, max: 1000, label: '住宅の維持費' },
   volatility: { min: 0, max: 50, label: 'ボラティリティ' },
   trials: { min: 100, max: 5000, integer: true, label: '試行回数' },
   eventYear: { min: 0, max: 80, integer: true, label: '発生年' },

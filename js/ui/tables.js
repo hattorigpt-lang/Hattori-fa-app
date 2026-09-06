@@ -62,6 +62,11 @@ function timelineRow(row) {
       ? `<span class="text-amber fw-700" title="${escapeHtml(row.eventNames.join('、'))}">-${formatMan(row.eventsCost, { withUnit: false })}</span>`
       : '<span class="text-subtle">—</span>';
 
+  const housingCell =
+    row.housingCost > 0
+      ? `<span class="text-muted">${formatMan(row.housingCost, { withUnit: false })}</span>`
+      : '<span class="text-subtle">—</span>';
+
   const flowClass = row.netFlow >= 0 ? 'text-brand' : 'text-danger fw-700';
   const ageLabel = row.isFireYear
     ? `<strong>${row.age} 歳</strong> <span class="badge badge--brand">FIRE</span>`
@@ -72,6 +77,7 @@ function timelineRow(row) {
     <td class="text-subtle">${row.year} 年目</td>
     <td class="is-numeric text-emerald">${formatMan(row.income, { withUnit: false })}</td>
     <td class="is-numeric text-muted">${formatMan(row.baseExpense, { withUnit: false })}</td>
+    <td class="is-numeric col-housing">${housingCell}</td>
     <td class="is-numeric">${eventCell}</td>
     <td class="is-numeric ${flowClass}">${formatMan(row.netFlow, { withUnit: false, signed: true })}</td>
     <td class="is-numeric fw-700">${formatMan(row.endAssets, { withUnit: false })}</td>

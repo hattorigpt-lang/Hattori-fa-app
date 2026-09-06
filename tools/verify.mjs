@@ -130,5 +130,93 @@ check('売却時課税モデルの手計算一致',
   Math.abs(y0.endAssets - 1100) < 0.01 && Math.abs(y0.endNetWorth - expectedNet) < 0.01,
   `gross=${round(y0.endAssets)} (期待1100) / net=${round(y0.endNetWorth)} (期待${round(expectedNet)})`);
 
+
+/* ------------------------------------------------------------------ */
+/* 11. 住宅ローンモデル                                                 */
+/* ------------------------------------------------------------------ */
+console.log('\n--- 住宅ローンモデル ---');
+
+// テストが既定値の変更に影響されないよう、住宅条件はここで明示的に固定する
+const housingBase = {
+  ...cloneState(DEFAULT_STATE),
+  monthlyFixed: 2, // 家賃を除いた固定費
+  housingEnabled: true,
+  housingPurchase: false,
+  housingRentMonthly: 10,
+  housingYear: 5,
+  housingPrice: 4500,
+  housingDownPayment: 500,
+  housingFees: 200,
+  housingLoanRate: 1.0,
+  housingLoanYears: 35,
+  housingUpkeepAnnual: 30,
+  housingDeduction: true,
+  events: [],
+};
+const HOUSING_PURCHASE_YEAR = 5;
+const HOUSING_LOAN_YEARS = 35;
+
+const rentForever = runSimulation(housingBase);
+const buyHouse = runSimulation({ ...housingBase, housingPurchase: true });
+console.log('生涯賃貸  : FIRE', rentForever.standard.achieved ? `${rentForever.standard.fireAge}歳` : '未達成',
+  '/ 終端資産', Math.round(rentForever.standard.terminalAssets));
+console.log('購入する  : FIRE', buyHouse.standard.achieved ? `${buyHouse.standard.fireAge}歳` : '未達成',
+  '/ 終端資産', Math.round(buyHouse.standard.terminalAssets));
+
+const plan = buyHouse.derived.housingPlan;
+console.log('借入額', Math.round(plan.loanAmount), '/ 月返済', plan.monthlyPayment.toFixed(2),
+  '/ 総利息', Math.round(plan.totalInterest), '/ 控除総額', plan.totalDeduction.toFixed(1));
+
+check('賃貸時の住居費 = 家賃12か月分', rentForever.derived.housingCost === 120,
+  `actual=${rentForever.derived.housingCost}`);
+
+const purchaseRow = buyHouse.standard.rows.find((r) => r.year === HOUSING_PURCHASE_YEAR);
+check('購入年に頭金＋諸費用が一括計上される', purchaseRow.housingOneTime > 700,
+  `oneTime=${Math.round(purchaseRow.housingOneTime)}（インフレで700万超）`);
+check('購入年に住宅ローン控除が収入計上される', purchaseRow.housingDeduction > 0,
+  `deduction=${purchaseRow.housingDeduction.toFixed(1)} 万円`);
+
+const duringLoan = buyHouse.standard.rows.find((r) => r.year === HOUSING_PURCHASE_YEAR + 10);
+const afterLoanYear = HOUSING_PURCHASE_YEAR + HOUSING_LOAN_YEARS + 2;
+const afterLoan = buyHouse.standard.rows.find((r) => r.year === afterLoanYear);
+// 完済後の住居費は「維持費のみ」。インフレ係数まで含めて厳密に突合する
+const expectedUpkeep = housingBase.housingUpkeepAnnual * 1.02 ** afterLoanYear;
+check('完済後の住居費は維持費のみ（インフレ調整後）',
+  Math.abs(afterLoan.housingCost - expectedUpkeep) < 0.01 &&
+  afterLoan.housingCost < duringLoan.housingCost,
+  `返済中 ${Math.round(duringLoan.housingCost)} → 完済後 ${afterLoan.housingCost.toFixed(1)}（期待 ${expectedUpkeep.toFixed(1)}）万円`);
+
+// 悪条件ほどFIRE達成が遅れ、その結果「就労期間が伸びて終端資産が増える」という
+// 交絡が起きるため、住宅条件そのものの効果は就労継続の前提で比較する。
+const buyWorking = runSimulation({ ...housingBase, housingPurchase: true, retireOnFire: false });
+const noDeduction = runSimulation({
+  ...housingBase, housingPurchase: true, retireOnFire: false, housingDeduction: false,
+});
+check('住宅ローン控除ONのほうが終端資産が多い（就労継続で比較）',
+  buyWorking.standard.terminalAssets > noDeduction.standard.terminalAssets,
+  `${Math.round(buyWorking.standard.terminalAssets)} > ${Math.round(noDeduction.standard.terminalAssets)}`);
+
+const highRate = runSimulation({
+  ...housingBase, housingPurchase: true, retireOnFire: false, housingLoanRate: 3.0,
+});
+check('金利が高いほど終端資産が減る（就労継続で比較）',
+  highRate.standard.terminalAssets < buyWorking.standard.terminalAssets,
+  `金利3.0% ${Math.round(highRate.standard.terminalAssets)} < 金利1.0% ${Math.round(buyWorking.standard.terminalAssets)}`);
+
+const bigDown = runSimulation({ ...housingBase, housingPurchase: true, housingDownPayment: 2000 });
+check('頭金を増やすと総利息が減る',
+  bigDown.derived.housingPlan.totalInterest < plan.totalInterest,
+  `頭金2000万 ${Math.round(bigDown.derived.housingPlan.totalInterest)} < 頭金500万 ${Math.round(plan.totalInterest)}`);
+
+// ローン返済額は名目固定のため、インフレ下でも増えない
+const withInflation = runSimulation({ ...housingBase, housingPurchase: true, housingUpkeepAnnual: 0 });
+const loanY10 = withInflation.standard.rows.find((r) => r.year === HOUSING_PURCHASE_YEAR + 5).housingCost;
+const loanY30 = withInflation.standard.rows.find((r) => r.year === HOUSING_PURCHASE_YEAR + 25).housingCost;
+check('ローン返済額はインフレで増えない（名目固定）', Math.abs(loanY10 - loanY30) < 0.01,
+  `10年後 ${loanY10.toFixed(1)} ≒ 30年後 ${loanY30.toFixed(1)} 万円`);
+
+check('住居費OFFなら住居費ゼロ',
+  runSimulation(cloneState(DEFAULT_STATE)).derived.housingCost === 0);
+
 console.log(`\n${failures === 0 ? '✅ すべて合格' : `❌ ${failures} 件の不一致`}`);
 process.exit(failures === 0 ? 0 : 1);

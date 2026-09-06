@@ -57,15 +57,22 @@ function distributePercent(values, total) {
   return floors;
 }
 
-/** 年間支出の合計と内訳を更新する。 */
-export function renderExpenseSummary(state) {
+/**
+ * 年間支出の合計と内訳を更新する。
+ * 住居費は独立したストリームのため、内訳に明示して合計へ加算する。
+ */
+export function renderExpenseSummary(state, derived) {
   const monthlyTotal = state.monthlyFixed + state.monthlyVar;
-  const annualTotal = monthlyTotal * 12 + state.annualFixed + state.annualVar;
-  setText($('#expense-total'), formatMan(annualTotal));
-  setText(
-    $('#expense-breakdown'),
-    `月次 ${formatMonthly(monthlyTotal)} × 12 ＋ 年次 ${formatMan(state.annualFixed + state.annualVar)}`,
-  );
+  const livingAnnual = monthlyTotal * 12 + state.annualFixed + state.annualVar;
+  const housing = derived.housingCost;
+  setText($('#expense-total'), formatMan(livingAnnual + housing));
+
+  const parts = [
+    `月次 ${formatMonthly(monthlyTotal)} × 12`,
+    `年次 ${formatMan(state.annualFixed + state.annualVar)}`,
+  ];
+  if (housing > 0) parts.push(`住居費 ${formatMan(housing)}`);
+  setText($('#expense-breakdown'), parts.join(' ＋ '));
 }
 
 /** 3枚のKPIカードを更新する。表示元は常に「標準」シナリオ。 */

@@ -123,6 +123,15 @@ table {
   width: 100%;
 }
 
+/*
+ * hidden 属性はUA既定の display:none で効くが、.stack-3 のように
+ * display を明示したクラスが当たると打ち消されてしまう。
+ * 属性を「隠す」という意図どおりに常に優先させる。
+ */
+[hidden] {
+  display: none !important;
+}
+
 ::selection {
   background: var(--brand);
   color: var(--text-inverse);
@@ -699,6 +708,12 @@ th {
   transform: translateY(1px);
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .btn--primary {
   color: var(--text-inverse);
   background: var(--brand);
@@ -869,6 +884,40 @@ th {
   font-weight: 700;
 }
 
+/* --- 住居費サマリー --- */
+.housing-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px var(--sp-4);
+  margin: var(--sp-3) 0 0;
+  padding-top: var(--sp-2);
+  border-top: 1px dashed var(--brand-border);
+}
+
+.housing-summary > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.housing-summary dt {
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+}
+
+.housing-summary dd {
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* 住居費OFFのときは年次明細の住居費列を隠す */
+.data-table[data-housing='off'] .col-housing {
+  display: none;
+}
+
 /* --- 感度分析（トルネードチャート） --- */
 .tornado__scale {
   display: grid;
@@ -988,6 +1037,17 @@ th {
     rgba(255, 255, 255, 0.45) 0 3px,
     transparent 3px 6px
   );
+}
+
+.tornado__empty {
+  padding: var(--sp-6) var(--sp-4);
+  text-align: center;
+  font-size: var(--fs-xs);
+  line-height: 1.8;
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
 }
 
 .tornado__values {
