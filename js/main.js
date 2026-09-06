@@ -16,7 +16,7 @@ import {
 } from './persistence.js';
 
 import { $, setText, showToast, debounce } from './ui/dom.js';
-import { initInputs, syncInputs } from './ui/inputs.js';
+import { initInputs, syncInputs, renderPensionEstimate } from './ui/inputs.js';
 import { initEvents, renderEvents } from './ui/events.js';
 import { renderAssetSummary, renderExpenseSummary, renderKpi, renderAlerts } from './ui/kpi.js';
 import { renderScenarioTable, renderTimeline, initTimeline } from './ui/tables.js';
@@ -52,6 +52,7 @@ function render() {
   latestResult = result;
 
   syncInputs(state);
+  renderPensionEstimate(state, result.derived.members);
   renderEvents(state);
   renderAssetSummary(state);
   renderExpenseSummary(state, result.derived);

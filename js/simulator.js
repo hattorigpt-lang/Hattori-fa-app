@@ -22,6 +22,7 @@
  */
 
 import { buildHousingPlan } from './housing.js';
+import { resolvePensionMonthly } from './pension.js';
 import {
   TAX_RATE,
   NISA_LIFETIME_LIMIT,
@@ -58,11 +59,14 @@ export function normalizeInput(state) {
     deathAge,
     horizon,
 
-    baseAnnualIncome: state.monthlyIncome * 12 + state.annualBonus,
+    // 世帯メンバー。就労終了と年金開始は「各人の年齢」で判定するため、
+    // 本人と配偶者で年齢差がある場合も正しく段階的に収入が切り替わる。
+    members: buildMembers(state),
+    // 二分探索の上限見積もりに使う、世帯の年金合計（受給開始判定は行わない粗い値）
+    totalAnnualPension: buildMembers(state).reduce((sum, m) => sum + m.annualPension, 0),
     baseAnnualExpense:
       (state.monthlyFixed + state.monthlyVar) * 12 + state.annualFixed + state.annualVar,
     baseMonthlyExpense: state.monthlyFixed + state.monthlyVar,
-    annualPension: state.pensionMonthly * 12,
 
     assetCash: state.assetCash,
     // NISA運用がOFFの場合、NISA資産は課税口座へ合算して扱う。
@@ -88,6 +92,59 @@ export function normalizeInput(state) {
       .filter((event) => event.year >= 0 && event.year <= deathAge - currentAge)
       .map((event) => ({ ...event })),
   };
+}
+
+/**
+ * 世帯を構成する人物のリストを作る。
+ * 単身なら本人のみ、配偶者ありなら2人分を返す。
+ */
+export function buildMembers(state) {
+  const selfIncome = state.monthlyIncome * 12 + state.annualBonus;
+  const members = [
+    {
+      key: 'self',
+      label: '本人',
+      age: state.currentAge,
+      annualIncome: selfIncome,
+      // 自動推計がONなら年収から概算し、OFFなら手入力値を使う
+      pensionMonthly: resolvePensionMonthly(state, {
+        netAnnualIncome: selfIncome,
+        manualMonthly: state.pensionMonthly,
+      }),
+    },
+  ];
+  if (state.spouseEnabled) {
+    const spouseIncome = state.spouseMonthlyIncome * 12 + state.spouseAnnualBonus;
+    members.push({
+      key: 'spouse',
+      label: '配偶者',
+      age: state.spouseAge,
+      annualIncome: spouseIncome,
+      pensionMonthly: resolvePensionMonthly(state, {
+        netAnnualIncome: spouseIncome,
+        manualMonthly: state.spousePensionMonthly,
+      }),
+    });
+  }
+  return members.map((member) => ({ ...member, annualPension: member.pensionMonthly * 12 }));
+}
+
+/** 指定した経過年における世帯の労働収入（各人の年齢で就労終了を判定）。 */
+function householdLaborIncome(members, year, salaryFactor) {
+  return members.reduce(
+    (sum, member) =>
+      member.age + year < PENSION_START_AGE ? sum + member.annualIncome * salaryFactor : sum,
+    0,
+  );
+}
+
+/** 指定した経過年における世帯の年金収入（各人の年齢で受給開始を判定）。 */
+function householdPension(members, year, inflationFactor) {
+  return members.reduce(
+    (sum, member) =>
+      member.age + year >= PENSION_START_AGE ? sum + member.annualPension * inflationFactor : sum,
+    0,
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -281,18 +338,19 @@ export function project(p, cfg) {
     previousNet = startNet;
     previousTarget = target;
 
-    // --- 収入 ---
+    // --- 収入（世帯合計。各人の年齢で就労終了・年金開始を判定する） ---
     let laborIncome = 0;
-    if (age < PENSION_START_AGE && laborMode === 'auto') {
+    if (laborMode === 'auto') {
       if (!retired) {
-        laborIncome = p.baseAnnualIncome * salaryFactor;
-      } else if (p.fireType === 'side') {
-        // サイドFIRE: 生活費（住居費の経常分を含む）の50%を軽い労働で賄い続ける
+        laborIncome = householdLaborIncome(p.members, year, salaryFactor);
+      } else if (p.fireType === 'side' && householdLaborIncome(p.members, year, 1) > 0) {
+        // サイドFIRE: 生活費（住居費の経常分を含む）の50%を軽い労働で賄い続ける。
+        // ただし世帯全員が就労終了年齢に達していれば労働収入はゼロ。
         const livingCost = baseExpense + p.housing.costAt(year, inflationFactor).recurring;
         laborIncome = livingCost * (FIRE_TYPES.side.ratio ?? 0.5);
       }
     }
-    const pensionIncome = age >= PENSION_START_AGE ? p.annualPension * inflationFactor : 0;
+    const pensionIncome = householdPension(p.members, year, inflationFactor);
 
     // --- 住居費（家賃 or ローン返済＋維持費）と住宅ローン控除 ---
     const housing = p.housing.costAt(year, inflationFactor);
@@ -406,7 +464,7 @@ function solveSustainableSpending(p, base, startYear, snapshot) {
   const remainingYears = Math.max(1, p.horizon - startYear);
 
   let low = 0;
-  let high = assetsAtStart + p.annualPension * remainingYears + p.baseAnnualExpense + 1000;
+  let high = assetsAtStart + p.totalAnnualPension * remainingYears + p.baseAnnualExpense + 1000;
 
   for (let i = 0; i < 60; i += 1) {
     const mid = (low + high) / 2;
@@ -444,10 +502,12 @@ export function runSimulation(state) {
   const totalAssets = p.assetCash + p.assetNisa + p.assetStock + p.assetOther;
   // 初年度の住居費（経常分）は「今の生活コスト」に含めて投資可能額を算出する
   const currentHousingCost = p.housing.costAt(0, 1).recurring;
-  const annualInvestable = p.baseAnnualIncome - p.baseAnnualExpense - currentHousingCost;
+  const currentAnnualIncome = householdLaborIncome(p.members, 0, 1) + householdPension(p.members, 0, 1);
+  const annualInvestable = currentAnnualIncome - p.baseAnnualExpense - currentHousingCost;
   const derived = {
     totalAssets,
-    annualIncome: p.baseAnnualIncome,
+    members: p.members,
+    annualIncome: currentAnnualIncome,
     annualExpense: p.baseAnnualExpense + currentHousingCost,
     housingCost: currentHousingCost,
     housingPlan: p.housing,

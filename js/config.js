@@ -15,6 +15,32 @@ export const NISA_ANNUAL_LIMIT = 360;
 /** 公的年金の受給開始年齢。 */
 export const PENSION_START_AGE = 65;
 
+/* --- 公的年金の概算（2024年度の制度が基準） --- */
+
+/** 老齢基礎年金の満額（万円 / 年）。 */
+export const BASIC_PENSION_FULL_ANNUAL = 81.6;
+
+/** 老齢基礎年金が満額となる納付月数（40年）。 */
+export const BASIC_PENSION_MAX_MONTHS = 480;
+
+/** 国民年金の納付が終了する年齢。 */
+export const BASIC_PENSION_END_AGE = 60;
+
+/** 老齢厚生年金（報酬比例部分）の給付乗率。 */
+export const EMPLOYEE_PENSION_RATE = 5.481 / 1000;
+
+/** 標準報酬月額の上限（万円）。これを超える報酬は年金額に反映されない。 */
+export const STANDARD_REMUNERATION_CAP = 65;
+
+/** 手取り年収から額面年収を逆算する際の手取り率。 */
+export const NET_INCOME_RATIO = 0.78;
+
+/** 生涯の平均標準報酬額を、現在の報酬から見積もる際の割引係数。 */
+export const CAREER_AVERAGE_RATIO = 0.85;
+
+/** 年金にかかる税・社会保険料を差し引いた手取り率。 */
+export const PENSION_NET_RATIO = 0.9;
+
 /** FIRE判定を打ち切る年齢。これ以降の到達は「達成」と見なさない。 */
 export const FIRE_JUDGE_AGE_LIMIT = 80;
 
@@ -103,6 +129,15 @@ export const DEFAULT_STATE = Object.freeze({
   annualBonus: 100,
   pensionMonthly: 15,
 
+  pensionAuto: false,
+  pensionStartWorkAge: 22,
+
+  spouseEnabled: false,
+  spouseAge: 30,
+  spouseMonthlyIncome: 25,
+  spouseAnnualBonus: 60,
+  spousePensionMonthly: 12,
+
   assetCash: 300,
   assetStock: 500,
   assetNisa: 0,
@@ -166,6 +201,11 @@ export const FIELD_RULES = {
   monthlyIncome: { min: 0, max: 1000, label: '手取り月給' },
   annualBonus: { min: 0, max: 5000, label: '年間手取り賞与' },
   pensionMonthly: { min: 0, max: 100, label: '公的年金（月額）' },
+  pensionStartWorkAge: { min: 15, max: 60, integer: true, label: '就職年齢' },
+  spouseAge: { min: 18, max: 100, integer: true, label: '配偶者の年齢' },
+  spouseMonthlyIncome: { min: 0, max: 1000, label: '配偶者の手取り月給' },
+  spouseAnnualBonus: { min: 0, max: 5000, label: '配偶者の手取り賞与' },
+  spousePensionMonthly: { min: 0, max: 100, label: '配偶者の公的年金（月額）' },
   assetCash: { min: 0, max: 1000000, label: '現金・預貯金' },
   assetStock: { min: 0, max: 1000000, label: '株式（課税口座）' },
   assetNisa: { min: 0, max: NISA_LIFETIME_LIMIT, label: 'NISA口座' },

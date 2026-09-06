@@ -44,6 +44,7 @@
     <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></symbol>
     <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4.5L21 19.5H3z"/><path d="M12 10v4M12 17h.01"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.4a3.2 3.2 0 0 1 0 5.2M17.5 14.2A6.5 6.5 0 0 1 21.5 20"/></symbol>
     <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 10.5L12 3.5l8.5 7"/><path d="M5.5 9.8V20h13V9.8"/><path d="M10 20v-5.5h4V20"/></symbol>
     <symbol id="i-tornado" viewBox="0 0 24 24"><path d="M4 5.5h16M6 10h12M8.5 14.5h7M11 19h2"/></symbol>
     <symbol id="i-dice" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><circle cx="8.5" cy="8.5" r="1.1"/><circle cx="15.5" cy="15.5" r="1.1"/><circle cx="12" cy="12" r="1.1"/></symbol>
@@ -140,13 +141,95 @@
               </div>
 
               <div class="field field--span2" data-field-wrap="pensionMonthly">
-                <label class="field__label" for="in-pension">65歳以降の公的年金（手取り月額）</label>
+                <label class="field__label" for="in-pension">
+                  65歳以降の公的年金（手取り月額）
+                  <span class="badge badge--brand" id="pension-auto-badge" hidden>自動推計</span>
+                </label>
                 <div class="field__control">
                   <input class="field__input" type="number" id="in-pension" data-field="pensionMonthly" inputmode="decimal">
                   <span class="field__suffix">万円 / 月</span>
                 </div>
+                <p class="field__hint" id="pension-breakdown" hidden>—</p>
                 <p class="field__error"></p>
               </div>
+            </div>
+
+            <!-- 年金の自動推計 -->
+            <div class="option-group mt-4">
+              <div class="switch-row">
+                <span class="switch-row__label">
+                  <svg class="icon text-emerald"><use href="#i-coins"/></svg>年金額を年収から自動推計する
+                </span>
+                <div class="switch-row__controls">
+                  <label class="switch">
+                    <input type="checkbox" data-field="pensionAuto" aria-label="年金額を自動推計する">
+                    <span class="switch__track"></span>
+                  </label>
+                </div>
+              </div>
+              <div class="switch-row" id="pension-start-row">
+                <span class="switch-row__label">就職年齢（厚生年金の加入開始）</span>
+                <div class="switch-row__controls">
+                  <div class="switch-row__rate field__control">
+                    <input class="field__input" type="number" data-field="pensionStartWorkAge" inputmode="numeric" aria-label="就職年齢">
+                    <span class="field__suffix">歳</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 配偶者（世帯合算） -->
+            <div class="option-group mt-4">
+              <div class="switch-row">
+                <span class="switch-row__label">
+                  <svg class="icon text-brand"><use href="#i-users"/></svg>配偶者を含めて世帯で試算する
+                </span>
+                <div class="switch-row__controls">
+                  <label class="switch">
+                    <input type="checkbox" data-field="spouseEnabled" aria-label="配偶者を含めて世帯で試算する">
+                    <span class="switch__track"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div id="spouse-detail" class="field-grid mt-3" hidden>
+              <div class="field" data-field-wrap="spouseAge">
+                <label class="field__label" for="in-spouse-age">配偶者の年齢</label>
+                <div class="field__control">
+                  <input class="field__input" type="number" id="in-spouse-age" data-field="spouseAge" inputmode="numeric">
+                  <span class="field__suffix">歳</span>
+                </div>
+                <p class="field__error"></p>
+              </div>
+              <div class="field" data-field-wrap="spouseMonthlyIncome">
+                <label class="field__label" for="in-spouse-income">配偶者の手取り月給</label>
+                <div class="field__control">
+                  <input class="field__input" type="number" id="in-spouse-income" data-field="spouseMonthlyIncome" inputmode="decimal">
+                  <span class="field__suffix">万円</span>
+                </div>
+                <p class="field__error"></p>
+              </div>
+              <div class="field" data-field-wrap="spouseAnnualBonus">
+                <label class="field__label" for="in-spouse-bonus">配偶者の年間手取り賞与</label>
+                <div class="field__control">
+                  <input class="field__input" type="number" id="in-spouse-bonus" data-field="spouseAnnualBonus" inputmode="decimal" step="5">
+                  <span class="field__suffix">万円</span>
+                </div>
+                <p class="field__error"></p>
+              </div>
+              <div class="field" data-field-wrap="spousePensionMonthly">
+                <label class="field__label" for="in-spouse-pension">
+                  配偶者の公的年金（月額）
+                  <span class="badge badge--brand" id="spouse-pension-auto-badge" hidden>自動</span>
+                </label>
+                <div class="field__control">
+                  <input class="field__input" type="number" id="in-spouse-pension" data-field="spousePensionMonthly" inputmode="decimal">
+                  <span class="field__suffix">万円 / 月</span>
+                </div>
+                <p class="field__error"></p>
+              </div>
+              <p class="field__hint field--span2" id="household-summary">—</p>
             </div>
           </div>
 
@@ -747,6 +830,7 @@
             <li><svg class="icon"><use href="#i-check"/></svg><span><strong>「リタイア後に使える月額」</strong>は、想定寿命の時点で資産がちょうど尽きる水準を逆算した値で、今日の物価に換算しています。</span></li>
             <li><svg class="icon"><use href="#i-check"/></svg><span><strong>住宅ローンの返済額は名目固定</strong>として扱い、インフレでは増えません（実質負担が年々軽くなる効果を再現）。一方、物件価格・頭金・諸費用は購入年までインフレで上昇します。</span></li>
             <li><svg class="icon"><use href="#i-check"/></svg><span><strong>購入した住宅は金融資産に含めません。</strong>売却して生活費に充てられる資産ではないため、含めるとFIRE達成を過大評価するためです。</span></li>
+            <li><svg class="icon"><use href="#i-check"/></svg><span><strong>年金の自動推計</strong>は「基礎年金 満額81.6万円 × 納付月数/480 ＋ 平均標準報酬額 × 5.481/1000 × 加入月数」で算定し、手取り換算しています。第3号被保険者・在職老齢年金・繰上げ／繰下げ受給・マクロ経済スライドは考慮していません。</span></li>
             <li><svg class="icon"><use href="#i-alert"/></svg><span>本ツールは概算であり、将来の運用成果・税制・社会保障制度を保証するものではありません。投資判断はご自身の責任でお願いします。</span></li>
           </ul>
         </div>

@@ -77,6 +77,14 @@ const LEVERS = [
     read: (state) => `${state.events.reduce((sum, event) => sum + event.cost, 0)} 万円`,
   },
   {
+    key: 'spouseMonthlyIncome',
+    label: '配偶者の手取り月給',
+    kind: 'ratio',
+    apply: (state, factor) => ({ ...state, spouseMonthlyIncome: state.spouseMonthlyIncome * factor }),
+    read: (state) => `${state.spouseMonthlyIncome} 万円`,
+    requires: (state) => state.spouseEnabled,
+  },
+  {
     key: 'housingPrice',
     label: '物件価格',
     kind: 'ratio',

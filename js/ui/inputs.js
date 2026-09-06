@@ -6,6 +6,7 @@
  */
 
 import { FIELD_RULES, FIRE_TYPES, TRIAL_OPTIONS } from '../config.js';
+import { estimatePension } from '../pension.js';
 import { coerceField, patch, normalizeAges, getState } from '../state.js';
 import { $, $$, setText, toggleClass } from './dom.js';
 
@@ -148,6 +149,53 @@ export function syncInputs(state) {
   toggleDependentRate('salaryGrowthRate', state.salaryGrowthEnabled);
   toggleDependentRate('volatility', state.monteCarloEnabled);
   toggleDependentRate('trials', state.monteCarloEnabled);
+
+  const spouseDetail = $('#spouse-detail');
+  if (spouseDetail) spouseDetail.hidden = !state.spouseEnabled;
+
+  const startRow = $('#pension-start-row');
+  if (startRow) startRow.hidden = !state.pensionAuto;
+}
+
+/**
+ * 年金の自動推計をフォームへ反映する。
+ * 推計値は state を書き換えず、表示だけを差し替える
+ * （自動推計をOFFに戻したとき、手入力していた値が失われないようにするため）。
+ */
+export function renderPensionEstimate(state, members) {
+  const badge = $('#pension-auto-badge');
+  const spouseBadge = $('#spouse-pension-auto-badge');
+  const breakdown = $('#pension-breakdown');
+  const selfInput = $('[data-field="pensionMonthly"]');
+  const spouseInput = $('[data-field="spousePensionMonthly"]');
+
+  if (badge) badge.hidden = !state.pensionAuto;
+  if (spouseBadge) spouseBadge.hidden = !state.pensionAuto;
+  if (breakdown) breakdown.hidden = !state.pensionAuto;
+
+  [selfInput, spouseInput].forEach((input) => {
+    if (!input) return;
+    input.readOnly = state.pensionAuto;
+    input.tabIndex = state.pensionAuto ? -1 : 0;
+  });
+
+  if (!state.pensionAuto) return;
+
+  members.forEach((member) => {
+    const input = member.key === 'self' ? selfInput : spouseInput;
+    if (input && document.activeElement !== input) {
+      input.value = member.pensionMonthly.toFixed(1);
+    }
+  });
+
+  const self = members[0];
+  const estimate = estimatePension(self.annualIncome, state.pensionStartWorkAge);
+  setText(
+    breakdown,
+    `基礎 ${estimate.basicAnnual.toFixed(0)}万円 ＋ 厚生 ${estimate.employeeAnnual.toFixed(0)}万円 ` +
+      `＝ 年額 ${estimate.grossAnnual.toFixed(0)}万円（加入 ${estimate.enrolledYears}年 / ` +
+      `平均標準報酬 ${estimate.standardRemuneration.toFixed(0)}万円）`,
+  );
 }
 
 function toggleDependentRate(key, enabled) {

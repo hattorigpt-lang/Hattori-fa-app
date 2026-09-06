@@ -79,6 +79,17 @@ export function renderExpenseSummary(state, derived) {
 export function renderKpi(result) {
   const { derived, standard } = result;
 
+  // --- 世帯構成の内訳（配偶者ありのときだけ意味を持つ） ---
+  const householdNode = $('#household-summary');
+  if (householdNode) {
+    setText(
+      householdNode,
+      derived.members
+        .map((member) => `${member.label} ${member.age}歳・年収 ${formatMan(member.annualIncome)}`)
+        .join(' ／ ') + ` → 世帯合計 ${formatMan(derived.annualIncome)}`,
+    );
+  }
+
   // --- 年間投資可能額 ---
   const investNode = $('#kpi-invest-value');
   setText(investNode, formatMan(derived.annualInvestable, { withUnit: false }));
