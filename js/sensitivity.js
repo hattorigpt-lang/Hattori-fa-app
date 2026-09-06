@@ -21,7 +21,9 @@ const LEVERS = [
     label: '手取り月給',
     kind: 'ratio',
     apply: (state, factor) => ({ ...state, monthlyIncome: state.monthlyIncome * factor }),
-    read: (state) => `${state.monthlyIncome} 万円`,
+    value: (state) => state.monthlyIncome,
+    unit: '万円',
+    better: 'increase',
   },
   {
     key: 'monthlyExpense',
@@ -32,14 +34,18 @@ const LEVERS = [
       monthlyFixed: state.monthlyFixed * factor,
       monthlyVar: state.monthlyVar * factor,
     }),
-    read: (state) => `${state.monthlyFixed + state.monthlyVar} 万円`,
+    value: (state) => state.monthlyFixed + state.monthlyVar,
+    unit: '万円',
+    better: 'decrease',
   },
   {
     key: 'annualBonus',
     label: '年間手取り賞与',
     kind: 'ratio',
     apply: (state, factor) => ({ ...state, annualBonus: state.annualBonus * factor }),
-    read: (state) => `${state.annualBonus} 万円`,
+    value: (state) => state.annualBonus,
+    unit: '万円',
+    better: 'increase',
   },
   {
     key: 'annualExpense',
@@ -50,7 +56,9 @@ const LEVERS = [
       annualFixed: state.annualFixed * factor,
       annualVar: state.annualVar * factor,
     }),
-    read: (state) => `${state.annualFixed + state.annualVar} 万円`,
+    value: (state) => state.annualFixed + state.annualVar,
+    unit: '万円',
+    better: 'decrease',
   },
   {
     key: 'assets',
@@ -63,8 +71,9 @@ const LEVERS = [
       assetStock: state.assetStock * factor,
       assetOther: state.assetOther * factor,
     }),
-    read: (state) =>
-      `${state.assetCash + state.assetNisa + state.assetStock + state.assetOther} 万円`,
+    value: (state) => state.assetCash + state.assetNisa + state.assetStock + state.assetOther,
+    unit: '万円',
+    better: 'increase',
   },
   {
     key: 'events',
@@ -74,14 +83,18 @@ const LEVERS = [
       ...state,
       events: state.events.map((event) => ({ ...event, cost: event.cost * factor })),
     }),
-    read: (state) => `${state.events.reduce((sum, event) => sum + event.cost, 0)} 万円`,
+    value: (state) => state.events.reduce((sum, event) => sum + event.cost, 0),
+    unit: '万円',
+    better: 'decrease',
   },
   {
     key: 'spouseMonthlyIncome',
     label: '配偶者の手取り月給',
     kind: 'ratio',
     apply: (state, factor) => ({ ...state, spouseMonthlyIncome: state.spouseMonthlyIncome * factor }),
-    read: (state) => `${state.spouseMonthlyIncome} 万円`,
+    value: (state) => state.spouseMonthlyIncome,
+    unit: '万円',
+    better: 'increase',
     requires: (state) => state.spouseEnabled,
   },
   {
@@ -89,7 +102,9 @@ const LEVERS = [
     label: '物件価格',
     kind: 'ratio',
     apply: (state, factor) => ({ ...state, housingPrice: state.housingPrice * factor }),
-    read: (state) => `${state.housingPrice} 万円`,
+    value: (state) => state.housingPrice,
+    unit: '万円',
+    better: 'decrease',
     requires: (state) => state.housingEnabled && state.housingPurchase,
   },
   {
@@ -97,8 +112,20 @@ const LEVERS = [
     label: '家賃（購入までの住居費）',
     kind: 'ratio',
     apply: (state, factor) => ({ ...state, housingRentMonthly: state.housingRentMonthly * factor }),
-    read: (state) => `${state.housingRentMonthly} 万円 / 月`,
+    value: (state) => state.housingRentMonthly,
+    unit: '万円 / 月',
+    better: 'decrease',
     requires: (state) => state.housingEnabled,
+  },
+  {
+    key: 'prepaymentAnnual',
+    label: '年間の繰り上げ返済額',
+    kind: 'ratio',
+    apply: (state, factor) => ({ ...state, prepaymentAnnual: state.prepaymentAnnual * factor }),
+    value: (state) => state.prepaymentAnnual,
+    unit: '万円 / 年',
+    better: 'decrease',
+    requires: (state) => state.housingEnabled && state.housingPurchase && state.prepaymentEnabled,
   },
   {
     key: 'housingLoanRate',
@@ -108,7 +135,10 @@ const LEVERS = [
       ...state,
       housingLoanRate: Math.max(0, state.housingLoanRate + delta),
     }),
-    read: (state) => `${state.housingLoanRate} %`,
+    value: (state) => state.housingLoanRate,
+    unit: '%',
+    bounds: [0, 8],
+    better: 'decrease',
     requires: (state) => state.housingEnabled && state.housingPurchase,
   },
   {
@@ -116,14 +146,20 @@ const LEVERS = [
     label: '期待利回り',
     kind: 'rate',
     apply: (state, delta) => ({ ...state, yieldStock: state.yieldStock + delta }),
-    read: (state) => `${state.yieldStock} %`,
+    value: (state) => state.yieldStock,
+    unit: '%',
+    bounds: [0, 15],
+    better: 'increase',
   },
   {
     key: 'inflationRate',
     label: 'インフレ率',
     kind: 'rate',
     apply: (state, delta) => ({ ...state, inflationRate: state.inflationRate + delta }),
-    read: (state) => `${state.inflationRate} %`,
+    value: (state) => state.inflationRate,
+    unit: '%',
+    bounds: [-2, 8],
+    better: 'decrease',
     requires: (state) => state.inflationEnabled,
   },
   {
@@ -131,10 +167,19 @@ const LEVERS = [
     label: '昇給率',
     kind: 'rate',
     apply: (state, delta) => ({ ...state, salaryGrowthRate: state.salaryGrowthRate + delta }),
-    read: (state) => `${state.salaryGrowthRate} %`,
+    value: (state) => state.salaryGrowthRate,
+    unit: '%',
+    bounds: [-5, 10],
+    better: 'increase',
     requires: (state) => state.salaryGrowthEnabled,
   },
 ];
+
+/** レバーの値を単位付きで整形する。 */
+function formatValue(lever, value) {
+  const digits = lever.kind === 'rate' ? 1 : Math.abs(value) < 100 ? 1 : 0;
+  return `${Number(value.toFixed(digits)).toLocaleString('ja-JP')} ${lever.unit}`;
+}
 
 /**
  * 標準シナリオでのFIRE達成年数だけを求める軽量版。
@@ -173,7 +218,7 @@ export function runSensitivity(state) {
     return {
       key: lever.key,
       label: lever.label,
-      current: lever.read(state),
+      current: formatValue(lever, lever.value(state)),
       deltaLabel: isRatio
         ? `±${SENSITIVITY_DELTA_RATIO * 100}%`
         : `±${SENSITIVITY_DELTA_RATE} pt`,
@@ -187,4 +232,112 @@ export function runSensitivity(state) {
   const maxDelta = Math.max(1, ...items.map((item) => item.impact));
 
   return { baseline, items, maxDelta };
+}
+
+/* ------------------------------------------------------------------ */
+/* 目標逆算（ゴールシーク）                                              */
+/* ------------------------------------------------------------------ */
+
+/** 逆算する対象は影響の大きい上位レバーに絞る（計算量と可読性の両面から）。 */
+const GOAL_SEEK_LEVERS = 5;
+
+/** 二分探索の反復回数。0.01年の精度が出れば十分。 */
+const GOAL_SEEK_ITERATIONS = 22;
+
+/** 比率系レバーの探索上限（現在値に対する倍率）。 */
+const RATIO_SEARCH_MAX = 5;
+
+/**
+ * 「FIRE達成を N 年早めるには、各変数をいくらにすればよいか」を逆算する。
+ *
+ * ±10% を振って傾きを見る感度分析に対し、こちらは目標から必要な水準を求める。
+ * 「何をどれだけ変えればよいか」が数値で出るため、そのまま行動計画になる。
+ *
+ * @param {object} state UI の状態
+ * @param {object} sensitivity runSensitivity の戻り値（影響順の並びを再利用する）
+ * @param {number} targetYearsEarlier 何年早めたいか
+ */
+export function runGoalSeek(state, sensitivity, targetYearsEarlier) {
+  const baseline = sensitivity.baseline;
+  if (!baseline.achieved) return { achievable: false, reason: 'unachieved', targetYearsEarlier };
+
+  const targetYears = baseline.years - targetYearsEarlier;
+  if (targetYears <= 0) {
+    return { achievable: false, reason: 'already-early', targetYearsEarlier, baseline };
+  }
+
+  const leverByKey = new Map(LEVERS.map((lever) => [lever.key, lever]));
+  const items = sensitivity.items
+    .slice(0, GOAL_SEEK_LEVERS)
+    .map((item) => solveLever(state, leverByKey.get(item.key), targetYears))
+    .filter(Boolean);
+
+  return { achievable: true, targetYearsEarlier, targetYears, baseline, items };
+}
+
+/** レバー1本について、目標年数に到達する値を二分探索で求める。 */
+function solveLever(state, lever, targetYears) {
+  if (!lever) return null;
+  const current = lever.value(state);
+  const bounds = searchBounds(lever, current);
+  if (bounds === null) return null;
+
+  const evaluate = (value) => fireYearOf(withValue(state, lever, value, current)).years;
+
+  // 探索の端でも目標に届かないなら「この変数だけでは到達不能」
+  if (evaluate(bounds.limit) > targetYears) {
+    return {
+      key: lever.key,
+      label: lever.label,
+      unit: lever.unit,
+      current,
+      currentLabel: formatValue(lever, current),
+      feasible: false,
+      limitLabel: formatValue(lever, bounds.limit),
+    };
+  }
+
+  let reachable = bounds.limit;
+  let unreachable = current;
+  for (let i = 0; i < GOAL_SEEK_ITERATIONS; i += 1) {
+    const mid = (reachable + unreachable) / 2;
+    if (evaluate(mid) <= targetYears) reachable = mid;
+    else unreachable = mid;
+  }
+
+  return {
+    key: lever.key,
+    label: lever.label,
+    unit: lever.unit,
+    current,
+    currentLabel: formatValue(lever, current),
+    required: reachable,
+    requiredLabel: formatValue(lever, reachable),
+    delta: reachable - current,
+    ratio: current !== 0 ? reachable / current - 1 : null,
+    isRate: lever.kind === 'rate',
+    feasible: true,
+  };
+}
+
+/** レバーを「改善方向へ最大限振った値」を探索の端として返す。 */
+function searchBounds(lever, current) {
+  if (lever.kind === 'rate') {
+    const [min, max] = lever.bounds ?? [-10, 20];
+    return { limit: lever.better === 'increase' ? max : min };
+  }
+  // 比率系: 増やす方向は現在値の RATIO_SEARCH_MAX 倍、減らす方向は 0 まで
+  if (lever.better === 'increase') {
+    if (current <= 0) return null; // 0 からは比率で増やせない
+    return { limit: current * RATIO_SEARCH_MAX };
+  }
+  if (current <= 0) return null; // すでに 0 なら減らす余地がない
+  return { limit: 0 };
+}
+
+/** レバーを指定した値に設定した状態を返す。 */
+function withValue(state, lever, value, current) {
+  if (lever.kind === 'rate') return lever.apply(state, value - current);
+  if (current === 0) return state;
+  return lever.apply(state, value / current);
 }

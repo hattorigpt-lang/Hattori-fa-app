@@ -9,7 +9,8 @@ import {
 } from './state.js';
 import { runSimulation } from './simulator.js';
 import { runMonteCarlo } from './montecarlo.js';
-import { runSensitivity } from './sensitivity.js';
+import { runSensitivity, runGoalSeek } from './sensitivity.js';
+import { compareHousing } from './comparison.js';
 import {
   saveToStorage, loadFromStorage, loadFromUrl, stripShareParam,
   buildShareUrl, copyToClipboard, storageEnabled,
@@ -22,13 +23,16 @@ import { renderAssetSummary, renderExpenseSummary, renderKpi, renderAlerts } fro
 import { renderScenarioTable, renderTimeline, initTimeline } from './ui/tables.js';
 import { initChart, renderChart } from './ui/chart.js';
 import { renderMonteCarlo } from './ui/montecarlo.js';
-import { renderSensitivity } from './ui/sensitivity.js';
+import { renderSensitivity, renderGoalSeek } from './ui/sensitivity.js';
 import { renderHousing } from './ui/housing.js';
+import { renderComparison } from './ui/comparison.js';
 
 let renderHandle = null;
 let latestResult = null;
 /** 直近のモンテカルロ結果。決定論の描画より重いため、別サイクルで更新する。 */
 let latestMonteCarlo = null;
+/** 直近の感度分析結果。目標逆算はこれを起点に、遅延サイクルで解く。 */
+let latestSensitivity = null;
 
 /* ------------------------------------------------------------------ */
 /* 描画                                                                */
@@ -62,9 +66,39 @@ function render() {
   renderAlerts(state, result);
   renderChart(result, usableMonteCarlo(state, result));
   renderScenarioTable(result);
-  renderSensitivity(runSensitivity(state), result.standard);
+  renderComparison(compareHousing(state));
+  latestSensitivity = runSensitivity(state);
+  renderSensitivity(latestSensitivity, result.standard);
   renderTimeline(result);
   renderMonteCarlo(state.monteCarloEnabled ? latestMonteCarlo : null);
+  renderPrintHeader(state, result);
+}
+
+/**
+ * 印刷時のみ表示される見出しを更新する。
+ * 紙になった時点で操作はできないため、前提条件と主要な結論をここに集約する。
+ */
+function renderPrintHeader(state, result) {
+  setText(
+    $('#print-date'),
+    new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }),
+  );
+
+  const { standard, derived } = result;
+  const household = state.spouseEnabled
+    ? `本人 ${state.currentAge}歳・配偶者 ${state.spouseAge}歳`
+    : `${state.currentAge}歳・単身`;
+  const fire = standard.achieved
+    ? `${standard.fireAge}歳（${standard.fireYear}年後）にFIRE達成`
+    : '想定寿命内にFIRE未達成';
+
+  setText(
+    $('#print-summary'),
+    `${household} ／ 世帯年収 ${Math.round(derived.annualIncome).toLocaleString('ja-JP')}万円 ／ ` +
+      `年間支出 ${Math.round(derived.annualExpense).toLocaleString('ja-JP')}万円 ／ ` +
+      `総資産 ${Math.round(derived.totalAssets).toLocaleString('ja-JP')}万円 ／ ` +
+      `想定利回り ${(standard.yieldStock * 100).toFixed(1)}% → ${fire}`,
+  );
 }
 
 /**
@@ -75,6 +109,18 @@ function render() {
 function usableMonteCarlo(state, result) {
   if (!state.monteCarloEnabled || !latestMonteCarlo) return null;
   return latestMonteCarlo.bands.length === result.standard.rows.length ? latestMonteCarlo : null;
+}
+
+/**
+ * 入力が落ち着いてから走らせる重い計算をまとめて実行する。
+ * 目標逆算はレバーごとに二分探索を回すため、毎フレーム実行すると入力が重くなる。
+ */
+function computeDeferred() {
+  const state = getState();
+  if (latestSensitivity) {
+    renderGoalSeek(runGoalSeek(state, latestSensitivity, state.goalSeekYears));
+  }
+  computeMonteCarlo();
 }
 
 /** モンテカルロ分析を実行し、結果カードとグラフの帯を更新する。 */
@@ -95,7 +141,7 @@ function computeMonteCarlo() {
 }
 
 // 決定論の再描画より重いため、入力が落ち着いてから実行する
-const refreshMonteCarlo = debounce(computeMonteCarlo, 320);
+const refreshDeferred = debounce(computeDeferred, 320);
 
 /* ------------------------------------------------------------------ */
 /* 永続化                                                              */
@@ -136,6 +182,8 @@ function initActions() {
     const copied = await copyToClipboard(url);
     showToast(copied ? '共有リンクをコピーしました' : 'コピーできませんでした。URLを手動で取得してください');
   });
+
+  $('#print-btn')?.addEventListener('click', () => window.print());
 
   $('#reset-btn')?.addEventListener('click', () => {
     reset();
@@ -191,11 +239,11 @@ function boot() {
   subscribe(() => {
     scheduleRender();
     persist();
-    refreshMonteCarlo();
+    refreshDeferred();
   });
 
   render();
-  computeMonteCarlo();
+  computeDeferred();
 
   // Chart.js は defer 読み込みのため、初回描画時にまだ未定義の場合がある。
   // 読み込み完了後に一度だけ再描画してグラフを確実に表示する。

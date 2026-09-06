@@ -53,4 +53,46 @@ export function renderMonteCarlo(mc) {
   setText($('#mc-age-p90'), mc.fireAge.p90 === null ? '—' : formatAge(mc.fireAge.p90));
   setText($('#mc-terminal-p50'), formatMan(mc.terminal.p50));
   setText($('#mc-terminal-p10'), formatMan(mc.terminal.p10));
+
+  renderSequenceRisk(mc.sequenceRisk);
+}
+
+const percent = (value) => `${(value * 100).toFixed(1)} %`;
+
+/**
+ * シーケンス・オブ・リターン・リスクを描画する。
+ * 「平均リターンは同じなのに、リタイア直後の数年が不調だと結果がどう変わるか」を
+ * 3分割で並べ、リスクの正体を数値で示す。
+ */
+function renderSequenceRisk(risk) {
+  const container = $('#seq-risk');
+  if (!container) return;
+  if (!risk) {
+    container.hidden = true;
+    return;
+  }
+  container.hidden = false;
+
+  setText($('#seq-risk-window'), `（リタイア直後 ${risk.windowYears} 年の運用成績で分類）`);
+
+  const cells = [
+    ['#seq-worst', '#seq-worst-sub', risk.worst],
+    ['#seq-overall', '#seq-overall-sub', risk.overall],
+    ['#seq-best', '#seq-best-sub', risk.best],
+  ];
+  cells.forEach(([valueId, subId, group]) => {
+    setText($(valueId), percent(group.depletionRate));
+    setText($(subId), `資産が尽きる確率 ／ 年率 ${percent(group.medianReturn)}`);
+  });
+
+  const ratio = risk.best.depletionRate > 0
+    ? risk.worst.depletionRate / risk.best.depletionRate
+    : null;
+  setText(
+    $('#seq-risk-note'),
+    `同じ平均リターンでも、リタイア直後${risk.windowYears}年が不調だった場合、資産が尽きる確率は ` +
+      `${percent(risk.best.depletionRate)} から ${percent(risk.worst.depletionRate)} へ` +
+      `${ratio ? `約${ratio.toFixed(1)}倍に` : ''}跳ね上がります。` +
+      'リタイア直前は現金比率を高める、当初数年の取り崩し額を抑えるなどの備えが有効です。',
+  );
 }

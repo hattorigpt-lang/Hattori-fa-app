@@ -66,6 +66,46 @@ function toLogNormalParams(mean, stdev) {
 }
 
 /* ------------------------------------------------------------------ */
+/* シーケンス・オブ・リターン・リスク                                      */
+/* ------------------------------------------------------------------ */
+
+/** リタイア直後の何年ぶんを「初期の運用成績」として評価するか。 */
+const SEQUENCE_WINDOW_YEARS = 5;
+
+/** 指定区間のリターンを年率換算（幾何平均）で返す。 */
+function annualizedReturn(series, startYear, windowYears) {
+  const end = Math.min(series.length, startYear + windowYears);
+  const count = end - startYear;
+  if (count <= 0) return 0;
+  let growth = 1;
+  for (let i = startYear; i < end; i += 1) growth *= 1 + series[i];
+  return growth ** (1 / count) - 1;
+}
+
+/**
+ * 初期リターンの上位／下位25%に分けて結末を集計する。
+ * 「平均は同じなのに、リタイア直後が不調だと結果がどれだけ変わるか」を数値で示す。
+ */
+function summarizeSequenceRisk(samples) {
+  if (samples.length === 0) return null;
+  const sorted = [...samples].sort((a, b) => a.earlyReturn - b.earlyReturn);
+  const quartile = Math.max(1, Math.floor(sorted.length / 4));
+
+  const summarize = (group) => ({
+    successRate: group.filter((s) => s.achieved && !s.depleted).length / group.length,
+    depletionRate: group.filter((s) => s.depleted).length / group.length,
+    medianReturn: group[Math.floor(group.length / 2)].earlyReturn,
+  });
+
+  return {
+    windowYears: SEQUENCE_WINDOW_YEARS,
+    worst: summarize(sorted.slice(0, quartile)),
+    best: summarize(sorted.slice(-quartile)),
+    overall: summarize(sorted),
+  };
+}
+
+/* ------------------------------------------------------------------ */
 /* 集計                                                                */
 /* ------------------------------------------------------------------ */
 
@@ -108,6 +148,8 @@ export function runMonteCarlo(state, { trials, volatility }) {
   const assetsByYear = Array.from({ length: yearCount }, () => new Float64Array(trials));
   const fireYears = [];
   const terminalAssets = new Float64Array(trials);
+  // シーケンスリスクの評価用: 各試行の「リタイア直後の運用成績」と結末
+  const sequenceSamples = [];
 
   let achievedCount = 0;
   let depletedCount = 0;
@@ -140,6 +182,14 @@ export function runMonteCarlo(state, { trials, volatility }) {
       fireYears.push(run.fireYear);
     }
     if (run.depleted) depletedCount += 1;
+
+    // リタイア直後（未達成なら開始直後）の数年の運用成績を記録する。
+    // 平均リターンが同じでも、この期間が不調だと資産寿命が大きく縮む。
+    sequenceSamples.push({
+      earlyReturn: annualizedReturn(stockSeries, run.achieved ? run.fireYear : 0, SEQUENCE_WINDOW_YEARS),
+      achieved: run.achieved,
+      depleted: run.depleted,
+    });
   }
 
   // --- 分位の算出 ---
@@ -167,6 +217,7 @@ export function runMonteCarlo(state, { trials, volatility }) {
     volatility,
     successRate: achievedCount / trials,
     depletionRate: depletedCount / trials,
+    sequenceRisk: summarizeSequenceRisk(sequenceSamples),
     fireAge: {
       p10: fireAgeAt(PERCENTILES.low),
       p50: fireAgeAt(PERCENTILES.mid),

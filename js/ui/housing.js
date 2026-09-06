@@ -2,6 +2,7 @@
  * 住居費セクションの表示制御とローン概要の描画。
  */
 
+import { PREPAYMENT_TYPES } from '../config.js';
 import { formatMan, formatMonthly } from '../formatters.js';
 import { $, setText } from './dom.js';
 
@@ -40,11 +41,46 @@ export function renderHousing(state, plan) {
     }
   }
 
+  const prepaymentDetail = $('#prepayment-detail');
+  if (prepaymentDetail) prepaymentDetail.hidden = !state.prepaymentEnabled;
+
   if (!plan?.purchase) return;
 
   setText($('#housing-monthly'), formatMonthly(plan.monthlyPayment));
   setText($('#housing-loan'), formatMan(plan.loanAmount));
-  setText($('#housing-total'), formatMan(plan.totalPayment));
+  setText($('#housing-payoff'), `${plan.payoffYears} 年`);
+  setText($('#housing-total'), formatMan(plan.totalPayment + plan.totalPrepayment));
   setText($('#housing-interest'), formatMan(plan.totalInterest));
   setText($('#housing-deduction'), plan.totalDeduction > 0 ? `−${formatMan(plan.totalDeduction)}` : '適用なし');
+
+  renderPrepayment(state, plan);
+}
+
+/** 繰り上げ返済の削減効果と方式の説明を描画する。 */
+function renderPrepayment(state, plan) {
+  const savedRow = $('#housing-saved-row');
+  const effect = plan.prepaymentEffect;
+  if (savedRow) savedRow.hidden = !effect;
+  if (effect) setText($('#housing-saved'), `−${formatMan(effect.interestSaved)}`);
+
+  const hint = $('#prepayment-hint');
+  if (!hint || !state.prepaymentEnabled) return;
+
+  const typeHint = PREPAYMENT_TYPES[state.prepaymentType]?.hint ?? '';
+  if (!effect) {
+    setText(hint, typeHint);
+    return;
+  }
+
+  // 期間短縮型は「何年早まったか」、返済額軽減型は「返済額がどこまで下がるか」が要点
+  const detail =
+    state.prepaymentType === 'reduce'
+      ? `10年後の毎月返済額は ${formatMonthly(plan.paymentAtYear(10))} まで低下します。`
+      : `完済が ${effect.yearsShortened} 年早まります（${effect.baselineYears} 年 → ${plan.payoffYears} 年）。`;
+
+  setText(
+    hint,
+    `${typeHint} 利息は ${formatMan(effect.baselineInterest)} → ${formatMan(plan.totalInterest)} に減り、` +
+      `${formatMan(effect.interestSaved)}の削減。${detail}`,
+  );
 }

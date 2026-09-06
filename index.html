@@ -44,6 +44,7 @@
     <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></symbol>
     <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4.5L21 19.5H3z"/><path d="M12 10v4M12 17h.01"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V3.5h10V9"/><rect x="3.5" y="9" width="17" height="7.5" rx="2"/><path d="M7 14h10v6.5H7z"/><circle cx="17" cy="12" r=".9"/></symbol>
     <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.4a3.2 3.2 0 0 1 0 5.2M17.5 14.2A6.5 6.5 0 0 1 21.5 20"/></symbol>
     <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 10.5L12 3.5l8.5 7"/><path d="M5.5 9.8V20h13V9.8"/><path d="M10 20v-5.5h4V20"/></symbol>
     <symbol id="i-tornado" viewBox="0 0 24 24"><path d="M4 5.5h16M6 10h12M8.5 14.5h7M11 19h2"/></symbol>
@@ -76,6 +77,9 @@
       <button type="button" id="share-btn" class="btn" aria-label="条件を共有するリンクをコピー">
         <svg class="icon"><use href="#i-share"/></svg><span class="btn__label">条件を共有</span>
       </button>
+      <button type="button" id="print-btn" class="btn" aria-label="印刷またはPDFとして保存">
+        <svg class="icon"><use href="#i-print"/></svg><span class="btn__label">印刷 / PDF</span>
+      </button>
       <button type="button" id="reset-btn" class="btn" aria-label="入力を初期値に戻す">
         <svg class="icon"><use href="#i-reset"/></svg><span class="btn__label">初期値に戻す</span>
       </button>
@@ -86,6 +90,15 @@
 <!-- ==========================================================================
      メイン
      ========================================================================== -->
+<!-- 印刷時のみ表示される見出し（画面上は非表示） -->
+<div class="print-header">
+  <div class="print-header__top">
+    <h1>FIRE &amp; 資産運用 シミュレーション結果</h1>
+    <span id="print-date"></span>
+  </div>
+  <p id="print-summary">—</p>
+</div>
+
 <main class="app-main">
   <div class="layout">
 
@@ -482,6 +495,40 @@
                   </div>
                 </div>
 
+                <!-- 繰り上げ返済 -->
+                <div class="option-group">
+                  <div class="switch-row">
+                    <span class="switch-row__label">
+                      <svg class="icon text-brand"><use href="#i-coins"/></svg>繰り上げ返済をする
+                    </span>
+                    <div class="switch-row__controls">
+                      <label class="switch">
+                        <input type="checkbox" data-field="prepaymentEnabled" aria-label="繰り上げ返済をする">
+                        <span class="switch__track"></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div id="prepayment-detail" hidden>
+                    <div class="switch-row">
+                      <span class="switch-row__label">年間の繰り上げ返済額</span>
+                      <div class="switch-row__controls">
+                        <div class="switch-row__rate field__control" style="width:92px">
+                          <input class="field__input" type="number" data-field="prepaymentAnnual" step="10" inputmode="decimal" aria-label="年間の繰り上げ返済額">
+                          <span class="field__suffix">万</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="switch-row">
+                      <span class="switch-row__label">方式</span>
+                      <div class="switch-row__controls">
+                        <select class="select" style="width:190px;padding:5px 26px 5px 8px;font-size:var(--fs-xs);background-color:var(--surface)"
+                                data-field="prepaymentType" aria-label="繰り上げ返済の方式"></select>
+                      </div>
+                    </div>
+                    <p class="field__hint mt-3" id="prepayment-hint">—</p>
+                  </div>
+                </div>
+
                 <div class="total-bar">
                   <div class="total-bar__row">
                     <span>毎月の返済額</span>
@@ -489,9 +536,11 @@
                   </div>
                   <dl class="housing-summary">
                     <div><dt>借入額</dt><dd class="num" id="housing-loan">—</dd></div>
+                    <div><dt>完済までの年数</dt><dd class="num" id="housing-payoff">—</dd></div>
                     <div><dt>総返済額</dt><dd class="num" id="housing-total">—</dd></div>
                     <div><dt>うち利息</dt><dd class="num" id="housing-interest">—</dd></div>
                     <div><dt>ローン控除の総額</dt><dd class="num" id="housing-deduction">—</dd></div>
+                    <div id="housing-saved-row" hidden><dt>繰り上げによる利息削減</dt><dd class="num text-emerald" id="housing-saved">—</dd></div>
                   </dl>
                 </div>
               </div>
@@ -728,6 +777,30 @@
         </div>
       </section>
 
+      <!-- 賃貸 vs 購入 -->
+      <section class="card" id="housing-compare-card" hidden>
+        <div class="card__head">
+          <h2 class="card__title"><svg class="icon"><use href="#i-home"/></svg>賃貸 vs 購入 の比較</h2>
+          <span class="card__note">住宅の設定だけを入れ替えた同一条件での比較</span>
+        </div>
+        <div class="card__body">
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">項目</th>
+                  <th scope="col" class="is-numeric">生涯賃貸</th>
+                  <th scope="col" class="is-numeric">購入する</th>
+                  <th scope="col" class="is-numeric">差（購入 − 賃貸）</th>
+                </tr>
+              </thead>
+              <tbody id="compare-tbody"></tbody>
+            </table>
+          </div>
+          <p class="mc-help" id="compare-verdict">—</p>
+        </div>
+      </section>
+
       <!-- 感度分析 -->
       <section class="card">
         <div class="card__head">
@@ -746,6 +819,19 @@
             <span></span>
           </div>
           <div class="tornado" id="tornado"></div>
+          <!-- 目標逆算 -->
+          <div class="goalseek" id="goalseek">
+            <div class="goalseek__head">
+              <p class="seq-risk__title">
+                <svg class="icon" style="color:var(--brand)"><use href="#i-target"/></svg>
+                目標逆算：FIRE達成を
+                <select class="select goalseek__select" data-field="goalSeekYears" data-type="number" aria-label="短縮したい年数"></select>
+                早めるには
+              </p>
+            </div>
+            <div id="goalseek-body"></div>
+          </div>
+
           <p class="mc-help">
             各変数を単独で動かしたときに、FIRE達成年がどれだけ前後するかを示します。棒が長い変数ほど効果が大きく、
             優先して見直すべき項目です。金額は ±10%、率は ±1 ポイントで変動させています。
@@ -782,6 +868,32 @@
               <div><dt>寿命時点の資産（下位10%）</dt><dd class="num" id="mc-terminal-p10">—</dd></div>
             </dl>
           </div>
+          <div class="seq-risk" id="seq-risk" hidden>
+            <p class="seq-risk__title">
+              <svg class="icon"><use href="#i-alert"/></svg>
+              シーケンス・オブ・リターン・リスク
+              <span class="text-subtle" id="seq-risk-window">—</span>
+            </p>
+            <div class="seq-risk__grid">
+              <div class="seq-risk__cell seq-risk__cell--bad">
+                <span class="seq-risk__label">初期が不調（下位25%）</span>
+                <span class="seq-risk__value num" id="seq-worst">—</span>
+                <span class="seq-risk__sub" id="seq-worst-sub">—</span>
+              </div>
+              <div class="seq-risk__cell">
+                <span class="seq-risk__label">全体平均</span>
+                <span class="seq-risk__value num" id="seq-overall">—</span>
+                <span class="seq-risk__sub" id="seq-overall-sub">—</span>
+              </div>
+              <div class="seq-risk__cell seq-risk__cell--good">
+                <span class="seq-risk__label">初期が好調（上位25%）</span>
+                <span class="seq-risk__value num" id="seq-best">—</span>
+                <span class="seq-risk__sub" id="seq-best-sub">—</span>
+              </div>
+            </div>
+            <p class="seq-risk__note" id="seq-risk-note">—</p>
+          </div>
+
           <p class="mc-help">
             年ごとのリターンを対数正規分布から抽選し、指定回数ぶん試算した結果です。平均リターンが同じでも、
             暴落がリタイア直前・直後に来ると資産寿命が大きく縮む「シーケンス・オブ・リターン・リスク」を評価できます。
@@ -843,6 +955,11 @@
 <footer class="app-footer">
   入力内容はお使いのブラウザ内にのみ保存され、外部へ送信されることはありません。
 </footer>
+
+<div class="print-footer">
+  本資料は入力条件にもとづく概算であり、将来の運用成果・税制・社会保障制度を保証するものではありません。
+  投資判断はご自身の責任でお願いします。
+</div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 

@@ -89,6 +89,18 @@ export const HOUSING_DEDUCTION_YEARS = 13;
 /** 住宅ローン控除の対象となる借入限度額（万円）。制度上の名目額のためインフレ調整しない。 */
 export const HOUSING_DEDUCTION_LOAN_CAP = 3000;
 
+/** 繰り上げ返済の方式。 */
+export const PREPAYMENT_TYPES = {
+  shorten: {
+    label: '期間短縮型（返済期間を縮める）',
+    hint: '毎月の返済額は変えず、完済を早めます。利息の削減効果は最も大きくなります。',
+  },
+  reduce: {
+    label: '返済額軽減型（毎月の負担を減らす）',
+    hint: '完済時期は変えず、毎月の返済額を下げます。月々のキャッシュフローに余裕が生まれます。',
+  },
+};
+
 /* --- モンテカルロ分析 --- */
 
 /** 株式の年間ボラティリティ（標準偏差）の既定値。先進国株式の長期実績に近い水準。 */
@@ -113,6 +125,9 @@ export const SENSITIVITY_DELTA_RATIO = 0.1;
 
 /** 率系の変数を動かす幅（±1パーセントポイント）。 */
 export const SENSITIVITY_DELTA_RATE = 1;
+
+/** 目標逆算で選べる「何年早めたいか」。 */
+export const GOAL_SEEK_OPTIONS = [3, 5, 10];
 
 /** localStorage の保存キー。スキーマ変更時はバージョンを上げる。 */
 export const STORAGE_KEY = 'fire-simulator:v1';
@@ -171,6 +186,11 @@ export const DEFAULT_STATE = Object.freeze({
   housingLoanYears: 35,
   housingUpkeepAnnual: 30,
   housingDeduction: true,
+  prepaymentEnabled: false,
+  prepaymentAnnual: 50,
+  prepaymentType: 'shorten',
+
+  goalSeekYears: 5,
 
   monteCarloEnabled: true,
   volatility: DEFAULT_VOLATILITY,
@@ -226,8 +246,10 @@ export const FIELD_RULES = {
   housingLoanRate: { min: 0, max: 10, label: '住宅ローン金利' },
   housingLoanYears: { min: 1, max: 50, integer: true, label: '返済年数' },
   housingUpkeepAnnual: { min: 0, max: 1000, label: '住宅の維持費' },
+  prepaymentAnnual: { min: 0, max: 5000, label: '繰り上げ返済額' },
   volatility: { min: 0, max: 50, label: 'ボラティリティ' },
   trials: { min: 100, max: 5000, integer: true, label: '試行回数' },
+  goalSeekYears: { min: 1, max: 30, integer: true, label: '短縮したい年数' },
   eventYear: { min: 0, max: 80, integer: true, label: '発生年' },
   eventCost: { min: 0, max: 100000, label: 'イベント費用' },
 };

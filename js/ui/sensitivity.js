@@ -82,3 +82,67 @@ export function renderSensitivity(sensitivity, standard) {
 
   setHtml($('#tornado'), sensitivity.items.map((item) => row(item, sensitivity.maxDelta)).join(''));
 }
+
+/* ------------------------------------------------------------------ */
+/* 目標逆算                                                            */
+/* ------------------------------------------------------------------ */
+
+/** 変化量を「+13%」「-0.66pt」の形に整形する。 */
+function formatChange(item) {
+  if (item.isRate) {
+    const sign = item.delta > 0 ? '+' : '';
+    return `${sign}${item.delta.toFixed(2)} pt`;
+  }
+  if (item.ratio === null) return '—';
+  const sign = item.ratio > 0 ? '+' : '';
+  return `${sign}${(item.ratio * 100).toFixed(0)} %`;
+}
+
+function goalSeekRow(item) {
+  if (!item.feasible) {
+    return `<tr>
+      <td>${escapeHtml(item.label)}</td>
+      <td>${escapeHtml(item.currentLabel)}</td>
+      <td colspan="2" class="text-subtle">この変数だけでは到達できません（限界 ${escapeHtml(item.limitLabel)}）</td>
+    </tr>`;
+  }
+  return `<tr>
+    <td>${escapeHtml(item.label)}</td>
+    <td class="text-muted">${escapeHtml(item.currentLabel)}</td>
+    <td><span class="goalseek__arrow">→</span><span class="goalseek__required">${escapeHtml(item.requiredLabel)}</span></td>
+    <td class="text-brand fw-700">${escapeHtml(formatChange(item))}</td>
+  </tr>`;
+}
+
+/**
+ * 目標逆算の結果を描画する。
+ * 感度分析が「傾き」を示すのに対し、こちらは「目標に必要な水準」を示す。
+ */
+export function renderGoalSeek(goalSeek) {
+  const body = $('#goalseek-body');
+  if (!body) return;
+
+  if (!goalSeek || !goalSeek.achievable) {
+    const message =
+      goalSeek?.reason === 'already-early'
+        ? `現在の条件では ${goalSeek.targetYearsEarlier} 年より早くFIREに到達するため、逆算する余地がありません。`
+        : '現在の条件では想定寿命内にFIREへ到達しないため、逆算できません。';
+    setHtml(body, `<p class="goalseek__note">${message}</p>`);
+    return;
+  }
+
+  setHtml(
+    body,
+    `<table class="goalseek__table">
+      <thead>
+        <tr><th>変数</th><th>現在</th><th>必要な水準</th><th>変化</th></tr>
+      </thead>
+      <tbody>${goalSeek.items.map(goalSeekRow).join('')}</tbody>
+    </table>
+    <p class="goalseek__note">
+      影響の大きい上位${goalSeek.items.length}項目について、その変数<strong>だけ</strong>で
+      ${goalSeek.targetYearsEarlier}年の短縮を達成するために必要な水準です。
+      実際には複数を組み合わせるため、それぞれの変化幅はこれより小さくて済みます。
+    </p>`,
+  );
+}

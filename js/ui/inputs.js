@@ -5,7 +5,9 @@
  * 「要素IDを1つずつ手動でキャッシュする」旧実装の冗長さと更新漏れを解消する。
  */
 
-import { FIELD_RULES, FIRE_TYPES, TRIAL_OPTIONS } from '../config.js';
+import {
+  FIELD_RULES, FIRE_TYPES, TRIAL_OPTIONS, PREPAYMENT_TYPES, GOAL_SEEK_OPTIONS,
+} from '../config.js';
 import { estimatePension } from '../pension.js';
 import { coerceField, patch, normalizeAges, getState } from '../state.js';
 import { $, $$, setText, toggleClass } from './dom.js';
@@ -26,8 +28,13 @@ function applyRules(element, key) {
 
 /** FIRE目標タイプの選択肢を config から生成する（HTML と定義の二重管理を避ける）。 */
 function populateFireTypes(select) {
+  populateOptions(select, FIRE_TYPES);
+}
+
+/** ラベル付き定義から select の選択肢を生成する。 */
+function populateOptions(select, definitions) {
   if (!select || select.options.length > 0) return;
-  Object.entries(FIRE_TYPES).forEach(([value, def]) => {
+  Object.entries(definitions).forEach(([value, def]) => {
     const option = document.createElement('option');
     option.value = value;
     option.textContent = def.label;
@@ -35,15 +42,20 @@ function populateFireTypes(select) {
   });
 }
 
-/** モンテカルロの試行回数の選択肢を生成する。 */
-function populateTrialOptions(select) {
+/** 数値の選択肢を単位付きで生成する。 */
+function populateNumberOptions(select, values, unit) {
   if (!select || select.options.length > 0) return;
-  TRIAL_OPTIONS.forEach((count) => {
+  values.forEach((value) => {
     const option = document.createElement('option');
-    option.value = String(count);
-    option.textContent = `${count.toLocaleString('ja-JP')} 回`;
+    option.value = String(value);
+    option.textContent = `${value.toLocaleString('ja-JP')} ${unit}`;
     select.appendChild(option);
   });
+}
+
+/** モンテカルロの試行回数の選択肢を生成する。 */
+function populateTrialOptions(select) {
+  populateNumberOptions(select, TRIAL_OPTIONS, '回');
 }
 
 /**
@@ -53,6 +65,8 @@ function populateTrialOptions(select) {
 export function initInputs() {
   populateFireTypes($('[data-field="fireType"]'));
   populateTrialOptions($('[data-field="trials"]'));
+  populateOptions($('[data-field="prepaymentType"]'), PREPAYMENT_TYPES);
+  populateNumberOptions($('[data-field="goalSeekYears"]'), GOAL_SEEK_OPTIONS, '年');
 
   collectBoundElements().forEach((element) => {
     const key = element.dataset.field;
