@@ -69,6 +69,14 @@ export const TRIAL_OPTIONS = [500, 1000, 3000];
 /** 分位の定義（下限・中央・上限）。 */
 export const PERCENTILES = { low: 0.1, mid: 0.5, high: 0.9 };
 
+/* --- 感度分析 --- */
+
+/** 金額系の変数を動かす比率（±10%）。 */
+export const SENSITIVITY_DELTA_RATIO = 0.1;
+
+/** 率系の変数を動かす幅（±1パーセントポイント）。 */
+export const SENSITIVITY_DELTA_RATE = 1;
+
 /** localStorage の保存キー。スキーマ変更時はバージョンを上げる。 */
 export const STORAGE_KEY = 'fire-simulator:v1';
 

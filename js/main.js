@@ -9,6 +9,7 @@ import {
 } from './state.js';
 import { runSimulation } from './simulator.js';
 import { runMonteCarlo } from './montecarlo.js';
+import { runSensitivity } from './sensitivity.js';
 import {
   saveToStorage, loadFromStorage, loadFromUrl, stripShareParam,
   buildShareUrl, copyToClipboard, storageEnabled,
@@ -21,6 +22,7 @@ import { renderAssetSummary, renderExpenseSummary, renderKpi, renderAlerts } fro
 import { renderScenarioTable, renderTimeline, initTimeline } from './ui/tables.js';
 import { initChart, renderChart } from './ui/chart.js';
 import { renderMonteCarlo } from './ui/montecarlo.js';
+import { renderSensitivity } from './ui/sensitivity.js';
 
 let renderHandle = null;
 let latestResult = null;
@@ -57,6 +59,7 @@ function render() {
   renderAlerts(state, result);
   renderChart(result, usableMonteCarlo(state, result));
   renderScenarioTable(result);
+  renderSensitivity(runSensitivity(state), result.standard);
   renderTimeline(result);
   renderMonteCarlo(state.monteCarloEnabled ? latestMonteCarlo : null);
 }

@@ -44,6 +44,7 @@
     <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></symbol>
     <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4.5L21 19.5H3z"/><path d="M12 10v4M12 17h.01"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+    <symbol id="i-tornado" viewBox="0 0 24 24"><path d="M4 5.5h16M6 10h12M8.5 14.5h7M11 19h2"/></symbol>
     <symbol id="i-dice" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><circle cx="8.5" cy="8.5" r="1.1"/><circle cx="15.5" cy="15.5" r="1.1"/><circle cx="12" cy="12" r="1.1"/></symbol>
     <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 4.5h11L19.5 8v11.5a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-14a1 1 0 0 1 1-1z"/><path d="M8 4.5v5h7M8 20.5v-5h8v5"/></symbol>
   </defs>
@@ -491,6 +492,33 @@
             </thead>
             <tbody id="scenario-tbody"></tbody>
           </table>
+        </div>
+      </section>
+
+      <!-- 感度分析 -->
+      <section class="card">
+        <div class="card__head">
+          <h2 class="card__title"><svg class="icon"><use href="#i-tornado"/></svg>感度分析：何から手を付けるべきか</h2>
+          <span class="card__note" id="sens-baseline">—</span>
+        </div>
+        <div class="card__body">
+          <!-- 行と同じグリッドを使い、中央の「基準」を棒グラフの軸と厳密に揃える -->
+          <div class="tornado__scale">
+            <span></span>
+            <span class="tornado__scale-axis">
+              <span class="tornado__scale-left"><svg class="icon"><use href="#i-chevron"/></svg>FIRE前倒し</span>
+              <span class="tornado__scale-center">基準</span>
+              <span class="tornado__scale-right">FIRE後ろ倒し<svg class="icon"><use href="#i-chevron"/></svg></span>
+            </span>
+            <span></span>
+          </div>
+          <div class="tornado" id="tornado"></div>
+          <p class="mc-help">
+            各変数を単独で動かしたときに、FIRE達成年がどれだけ前後するかを示します。棒が長い変数ほど効果が大きく、
+            優先して見直すべき項目です。金額は ±10%、率は ±1 ポイントで変動させています。
+            <strong>▼</strong> はその変数を下げたケース（上段の棒）、<strong>▲</strong> は上げたケース（下段の棒）です。
+            縞模様の棒は、想定寿命内に達成できず値が頭打ちになっていることを示します。
+          </p>
         </div>
       </section>
 

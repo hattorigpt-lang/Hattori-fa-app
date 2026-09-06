@@ -227,6 +227,11 @@ export function project(p, cfg) {
   let fireYear = null;
   let fireAge = null;
   let fireTarget = 0;
+  // 資産曲線と目標額曲線の交点を線形補間した小数年。感度分析のように
+  // 微小な差を比較する用途では、年単位の丸めでは差が潰れてしまうため。
+  let fireYearExact = null;
+  let previousNet = null;
+  let previousTarget = null;
   let snapshotAtFire = null;
   let depleted = false;
   let depletionAge = null;
@@ -258,8 +263,12 @@ export function project(p, cfg) {
       fireAge = age;
       fireTarget = target;
       snapshotAtFire = { buckets: cloneBuckets(buckets), tracker: { ...tracker } };
+      fireYearExact = interpolateCrossing(year, previousNet, previousTarget, startNet, target);
       if (p.retireOnFire) retired = true;
     }
+
+    previousNet = startNet;
+    previousTarget = target;
 
     // --- 収入 ---
     let laborIncome = 0;
@@ -339,6 +348,7 @@ export function project(p, cfg) {
     rows,
     achieved: fireYear !== null,
     fireYear,
+    fireYearExact,
     fireAge,
     fireTarget,
     // 未達成時でも比較表に必要資産を表示できるよう、現時点／終端の目標額を常に返す
@@ -351,6 +361,19 @@ export function project(p, cfg) {
     terminalAssets: totalValue(buckets),
     terminalNetWorth: netWorth(buckets, p.taxRate),
   };
+}
+
+/**
+ * 前年と当年の「資産 − 目標額」の符号反転から、達成時点を小数年で補間する。
+ * 前年のデータが無い（初年度に達成）場合はその年をそのまま返す。
+ */
+function interpolateCrossing(year, previousNet, previousTarget, currentNet, currentTarget) {
+  if (previousNet === null) return year;
+  const gapBefore = previousTarget - previousNet; // 前年は未達なので正
+  const gapNow = currentTarget - currentNet; // 当年は達成済みなので0以下
+  const denominator = gapBefore - gapNow;
+  if (denominator <= 0) return year;
+  return year - 1 + Math.min(1, Math.max(0, gapBefore / denominator));
 }
 
 /**

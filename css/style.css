@@ -869,6 +869,140 @@ th {
   font-weight: 700;
 }
 
+/* --- 感度分析（トルネードチャート） --- */
+.tornado__scale {
+  display: grid;
+  grid-template-columns: 38% minmax(0, 1fr) 74px;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  color: var(--text-subtle);
+}
+
+.tornado__scale-axis {
+  position: relative;
+  display: block;
+  height: 16px;
+}
+
+.tornado__scale-left,
+.tornado__scale-center,
+.tornado__scale-right {
+  position: absolute;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.tornado__scale-left {
+  left: 0;
+  color: var(--emerald);
+}
+
+.tornado__scale-left .icon {
+  transform: rotate(90deg);
+}
+
+.tornado__scale-center {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.tornado__scale-right {
+  right: 0;
+  color: var(--amber);
+}
+
+.tornado__scale-right .icon {
+  transform: rotate(-90deg);
+}
+
+.tornado {
+  display: grid;
+  gap: 3px;
+}
+
+.tornado__row {
+  display: grid;
+  grid-template-columns: 38% minmax(0, 1fr) 74px;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 5px 0;
+  border-radius: var(--r-xs);
+  transition: background var(--transition);
+}
+
+.tornado__row:hover {
+  background: var(--surface-muted);
+}
+
+.tornado__label {
+  min-width: 0;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.tornado__label small {
+  display: block;
+  font-size: var(--fs-2xs);
+  font-weight: 400;
+  color: var(--text-subtle);
+}
+
+.tornado__track {
+  position: relative;
+  height: 24px;
+}
+
+.tornado__axis {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-strong);
+}
+
+.tornado__bar {
+  position: absolute;
+  height: 8px;
+  min-width: 2px;
+  border-radius: 3px;
+  transition: width var(--transition);
+}
+
+.tornado__bar--top { top: 2px; }
+.tornado__bar--bottom { bottom: 2px; }
+.tornado__bar--good { background: var(--emerald); }
+.tornado__bar--bad { background: #d97706; }
+
+/* 想定寿命内に未達となるケースは、値が頭打ちであることを縞模様で示す */
+.tornado__bar--capped {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.45) 0 3px,
+    transparent 3px 6px
+  );
+}
+
+.tornado__values {
+  display: grid;
+  gap: 4px;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tornado__values span {
+  line-height: 1;
+}
+
 /* --- モンテカルロ分析 --- */
 .mc-layout {
   display: grid;
@@ -1301,6 +1435,25 @@ th {
   }
   .mc-layout {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .tornado__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tornado__values {
+    grid-auto-flow: column;
+    justify-content: start;
+    gap: var(--sp-3);
+    text-align: left;
+  }
+  .tornado__scale {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tornado__scale > span:first-child,
+  .tornado__scale > span:last-child {
+    display: none;
   }
   .mc-stats {
     grid-auto-flow: row;
