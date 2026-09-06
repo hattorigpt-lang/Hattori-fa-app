@@ -1538,6 +1538,19 @@ th {
   }
 }
 
+/* 極小画面ではヘッダーのボタンをアイコンのみに縮める（横スクロールを出さない） */
+@media (max-width: 420px) {
+  .btn__label {
+    display: none;
+  }
+  .header-actions .btn {
+    padding: 7px 9px;
+  }
+  #save-indicator {
+    padding: 2px 6px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

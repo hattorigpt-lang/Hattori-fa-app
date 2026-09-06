@@ -69,13 +69,14 @@
 
     <div class="header-actions">
       <span id="save-indicator" class="badge badge--muted" role="status" aria-live="polite">
-        <svg class="icon"><use href="#i-save"/></svg><span id="save-indicator-text">自動保存</span>
+        <svg class="icon"><use href="#i-save"/></svg>
+        <span class="btn__label" id="save-indicator-text">自動保存</span>
       </span>
-      <button type="button" id="share-btn" class="btn">
-        <svg class="icon"><use href="#i-share"/></svg>条件を共有
+      <button type="button" id="share-btn" class="btn" aria-label="条件を共有するリンクをコピー">
+        <svg class="icon"><use href="#i-share"/></svg><span class="btn__label">条件を共有</span>
       </button>
-      <button type="button" id="reset-btn" class="btn">
-        <svg class="icon"><use href="#i-reset"/></svg>初期値に戻す
+      <button type="button" id="reset-btn" class="btn" aria-label="入力を初期値に戻す">
+        <svg class="icon"><use href="#i-reset"/></svg><span class="btn__label">初期値に戻す</span>
       </button>
     </div>
   </div>
