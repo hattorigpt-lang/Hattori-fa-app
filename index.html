@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="資産推移・FIRE達成年齢・老後の取り崩し可能額を、ライフイベントとNISA・売却時課税まで織り込んで試算するシミュレーターです。">
+  <meta name="color-scheme" content="light">
+  <title>FIRE & 資産運用 ライフイベントシミュレーター</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+
+<!-- ==========================================================================
+     アイコンスプライト（外部アイコンフォントを使わず、必要な図形だけを内包する）
+     ========================================================================== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-logo" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 15l4-4.5 3 3L21 6"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H18a1 1 0 0 1 1 1v1.5"/><rect x="3" y="7.5" width="18" height="12" rx="2.5"/><circle cx="16" cy="13.5" r="1.2"/></symbol>
+    <symbol id="i-card" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6 15h4"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M9.5 15l1.8 1.8L15 13"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 6.5h16M9.5 6.5V4.5h5v2M6.5 6.5l1 13a1.5 1.5 0 0 0 1.5 1.4h6a1.5 1.5 0 0 0 1.5-1.4l1-13"/></symbol>
+    <symbol id="i-wand" viewBox="0 0 24 24"><path d="M5 19L16.5 7.5M14.5 5.5l4 4M6 3.5v3M4.5 5h3M17.5 15v3M16 16.5h3"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="M8.3 10.8l7.4-4M8.3 13.2l7.4 4"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 4v6h6"/><path d="M4.6 14a8 8 0 1 0 1.4-6.2L4 10"/></symbol>
+    <symbol id="i-coins" viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="7.5" ry="3.2"/><path d="M4.5 7v5c0 1.8 3.4 3.2 7.5 3.2s7.5-1.4 7.5-3.2V7"/><path d="M4.5 12v5c0 1.8 3.4 3.2 7.5 3.2s7.5-1.4 7.5-3.2v-5"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3s5 4.2 5 8.5a5 5 0 0 1-10 0C7 9 9 7.5 9 7.5s.4 2 1.6 2.6C11 8 12 5.5 12 3z"/></symbol>
+    <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M7 3h10M7 21h10M8 3v3.5c0 2 4 3.5 4 5.5s-4 3.5-4 5.5V21M16 3v3.5c0 2-4 3.5-4 5.5s4 3.5 4 5.5V21"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16l3.5-5 3 2.5L21 5"/><path d="M7 21v-5" opacity=".45"/></symbol>
+    <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M3 9.5h18M9 9.5V19.5"/></symbol>
+    <symbol id="i-timeline" viewBox="0 0 24 24"><path d="M5 4v16"/><circle cx="5" cy="8" r="1.8"/><circle cx="5" cy="16" r="1.8"/><path d="M9 8h11M9 16h8"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4.5L21 19.5H3z"/><path d="M12 10v4M12 17h.01"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 4.5h11L19.5 8v11.5a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-14a1 1 0 0 1 1-1z"/><path d="M8 4.5v5h7M8 20.5v-5h8v5"/></symbol>
+  </defs>
+</svg>
+
+<!-- ==========================================================================
+     ヘッダー
+     ========================================================================== -->
+<header class="app-header">
+  <div class="app-header__inner">
+    <div class="brand">
+      <span class="brand__mark"><svg class="icon" style="font-size:19px"><use href="#i-logo"/></svg></span>
+      <div>
+        <h1 class="brand__title">
+          FIRE &amp; 資産運用 シミュレーター
+          <span class="badge badge--brand">ライフイベント動的対応版</span>
+        </h1>
+        <p class="brand__subtitle">資産推移・FIRE達成年齢・老後の取り崩し可能額を、NISA と売却時課税まで織り込んで一元試算</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <span id="save-indicator" class="badge badge--muted" role="status" aria-live="polite">
+        <svg class="icon"><use href="#i-save"/></svg><span id="save-indicator-text">自動保存</span>
+      </span>
+      <button type="button" id="share-btn" class="btn">
+        <svg class="icon"><use href="#i-share"/></svg>条件を共有
+      </button>
+      <button type="button" id="reset-btn" class="btn">
+        <svg class="icon"><use href="#i-reset"/></svg>初期値に戻す
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ==========================================================================
+     メイン
+     ========================================================================== -->
+<main class="app-main">
+  <div class="layout">
+
+    <!-- ================= 左カラム: 入力 ================= -->
+    <div class="column">
+
+      <section class="card">
+        <div class="card__head">
+          <h2 class="card__title"><svg class="icon"><use href="#i-sliders"/></svg>シミュレーション基本設定</h2>
+          <span class="card__note">入力と同時に自動反映</span>
+        </div>
+
+        <div class="card__body">
+
+          <!-- 1. 基本・収入 -->
+          <div class="section">
+            <h3 class="section__title"><svg class="icon"><use href="#i-user"/></svg>1. 基本・収入データ</h3>
+            <div class="field-grid">
+              <div class="field" data-field-wrap="currentAge">
+                <label class="field__label" for="in-current-age">現在の年齢</label>
+                <div class="field__control">
+                  <input class="field__input" type="number" id="in-current-age" data-field="currentAge" inputmode="numeric">
+                  <span class="field__suffix">歳</span>
+                </div>
+                <p class="field__error"></p>
+              </div>
+
+              <div class="field" data-field-wrap="deathAge">
+                <label class="field__label" for="in-death-age">想定寿命</label>
+                <div class="field__control">
+                  <input class="field__input" type="number" id="in-death-age" data-field="deathAge" inputmode="numeric">
+                  <span class="field__suffix">歳</span>
+                </div>
+                <p class="field__error"></p>
+              </div>
+
+              <div class="field" data-field-wrap="monthlyIncome">
+                <label class="field__label" for="in-monthly-income">手取り月給</label>
+                <div class="field__control">
+                  <input class="field__input" type="number" id="in-monthly-income" data-field="monthlyIncome" inputmode="decimal">
+                  <span class="field__suffix">万円</span>
+                </div>
+                <p class="field__error"></p>
+              </div>
+
+              <div class="field" data-field-wrap="annualBonus">
+                <label class="field__label" for="in-annual-bonus">年間手取り賞与</label>
+                <div class="field__control">
+                  <input class="field__input" type="number" id="in-annual-bonus" data-field="annualBonus" inputmode="decimal" step="5">
+                  <span class="field__suffix">万円</span>
+                </div>
+                <p class="field__error"></p>
+              </div>
+
+              <div class="field field--span2" data-field-wrap="pensionMonthly">
+                <label class="field__label" for="in-pension">65歳以降の公的年金（手取り月額）</label>
+                <div class="field__control">
+                  <input class="field__input" type="number" id="in-pension" data-field="pensionMonthly" inputmode="decimal">
+                  <span class="field__suffix">万円 / 月</span>
+                </div>
+                <p class="field__error"></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. 資産 -->
+          <div class="section">
+            <h3 class="section__title"><svg class="icon"><use href="#i-wallet"/></svg>2. 現在の資産と想定利回り</h3>
+
+            <div class="asset-row__head">
+              <span>資産区分</span><span>保有額</span><span>年利回り</span>
+            </div>
+
+            <div class="asset-row">
+              <span class="asset-row__label"><i class="asset-row__dot" style="background:#94a3b8"></i>現金・預貯金</span>
+              <div class="field__control">
+                <input class="field__input" type="number" data-field="assetCash" inputmode="decimal" step="10" aria-label="現金・預貯金の保有額">
+                <span class="field__suffix">万</span>
+              </div>
+              <div class="field__control">
+                <input class="field__input field__input--rate" type="number" value="0.0" readonly tabindex="-1" aria-label="現金の利回り（固定0%）">
+                <span class="field__suffix">%</span>
+              </div>
+            </div>
+
+            <div class="asset-row">
+              <span class="asset-row__label"><i class="asset-row__dot" style="background:#059669"></i>NISA口座</span>
+              <div class="field__control">
+                <input class="field__input" type="number" data-field="assetNisa" inputmode="decimal" step="10" aria-label="NISA口座の保有額">
+                <span class="field__suffix">万</span>
+              </div>
+              <div class="field__control">
+                <input class="field__input field__input--rate" type="number" id="mirror-yield-nisa" readonly tabindex="-1" aria-label="NISA口座の利回り（株式と同率）">
+                <span class="field__suffix">%</span>
+              </div>
+            </div>
+
+            <div class="asset-row">
+              <span class="asset-row__label"><i class="asset-row__dot" style="background:#2f5bd8"></i>株式・投信（課税）</span>
+              <div class="field__control">
+                <input class="field__input" type="number" data-field="assetStock" inputmode="decimal" step="10" aria-label="課税口座の株式・投資信託の保有額">
+                <span class="field__suffix">万</span>
+              </div>
+              <div class="field__control">
+                <input class="field__input field__input--rate" type="number" data-field="yieldStock" inputmode="decimal" step="0.5" aria-label="株式の期待利回り">
+                <span class="field__suffix">%</span>
+              </div>
+            </div>
+
+            <div class="asset-row">
+              <span class="asset-row__label"><i class="asset-row__dot" style="background:#6366f1"></i>その他運用資産</span>
+              <div class="field__control">
+                <input class="field__input" type="number" data-field="assetOther" inputmode="decimal" step="10" aria-label="その他運用資産の保有額">
+                <span class="field__suffix">万</span>
+              </div>
+              <div class="field__control">
+                <input class="field__input field__input--rate" type="number" data-field="yieldOther" inputmode="decimal" step="0.5" aria-label="その他運用資産の期待利回り">
+                <span class="field__suffix">%</span>
+              </div>
+            </div>
+
+            <div class="total-bar">
+              <div class="total-bar__row">
+                <span>現在の総資産</span>
+                <span class="total-bar__value num" id="total-assets-value">—</span>
+              </div>
+              <div class="stack-bar" id="asset-stack" role="img" aria-label="資産構成比">
+                <span class="stack-bar__seg" data-seg="cash" style="background:#94a3b8"></span>
+                <span class="stack-bar__seg" data-seg="nisa" style="background:#059669"></span>
+                <span class="stack-bar__seg" data-seg="stock" style="background:#2f5bd8"></span>
+                <span class="stack-bar__seg" data-seg="other" style="background:#6366f1"></span>
+              </div>
+              <p class="total-bar__sub mt-3" id="asset-composition">—</p>
+            </div>
+          </div>
+
+          <!-- 3. 支出 -->
+          <div class="section">
+            <h3 class="section__title"><svg class="icon"><use href="#i-card"/></svg>3. 支出設定</h3>
+            <div class="field-grid">
+              <div class="field" data-field-wrap="monthlyFixed">
+                <label class="field__label" for="in-monthly-fixed">月間固定費</label>
+                <div class="field__control">
+                  <input class="field__input" type="number" id="in-monthly-fixed" data-field="monthlyFixed" inputmode="decimal">
+                  <span class="field__suffix">万円</span>
+                </div>
+                <p class="field__error"></p>
+              </div>
+              <div class="field" data-field-wrap="monthlyVar">
+                <label class="field__label" for="in-monthly-var">月間変動費</label>
+                <div class="field__control">
+                  <input class="field__input" type="number" id="in-monthly-var" data-field="monthlyVar" inputmode="decimal">
+                  <span class="field__suffix">万円</span>
+                </div>
+                <p class="field__error"></p>
+              </div>
+              <div class="field" data-field-wrap="annualFixed">
+                <label class="field__label" for="in-annual-fixed">年間固定費（保険・税等）</label>
+                <div class="field__control">
+                  <input class="field__input" type="number" id="in-annual-fixed" data-field="annualFixed" inputmode="decimal" step="5">
+                  <span class="field__suffix">万円</span>
+                </div>
+                <p class="field__error"></p>
+              </div>
+              <div class="field" data-field-wrap="annualVar">
+                <label class="field__label" for="in-annual-var">年間変動費（レジャー等）</label>
+                <div class="field__control">
+                  <input class="field__input" type="number" id="in-annual-var" data-field="annualVar" inputmode="decimal" step="5">
+                  <span class="field__suffix">万円</span>
+                </div>
+                <p class="field__error"></p>
+              </div>
+            </div>
+            <div class="total-bar">
+              <div class="total-bar__row">
+                <span>年間支出合計</span>
+                <span class="total-bar__value num" id="expense-total">—</span>
+              </div>
+              <p class="total-bar__sub mt-3" id="expense-breakdown">—</p>
+            </div>
+          </div>
+
+          <!-- 4. FIRE目標と条件 -->
+          <div class="section">
+            <h3 class="section__title"><svg class="icon"><use href="#i-target"/></svg>4. FIRE目標とシミュレーション条件</h3>
+
+            <div class="field" style="margin-bottom:var(--sp-4)">
+              <label class="field__label" for="in-fire-type">FIRE目標タイプ</label>
+              <select class="select" id="in-fire-type" data-field="fireType"></select>
+              <p class="field__hint" id="fire-type-hint"></p>
+            </div>
+
+            <div class="option-group">
+              <div class="switch-row">
+                <span class="switch-row__label">
+                  <svg class="icon text-brand"><use href="#i-flame"/></svg>FIRE達成後はリタイアする
+                </span>
+                <div class="switch-row__controls">
+                  <label class="switch">
+                    <input type="checkbox" data-field="retireOnFire" aria-label="FIRE達成後にリタイアする">
+                    <span class="switch__track"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="switch-row">
+                <span class="switch-row__label">
+                  <svg class="icon text-amber"><use href="#i-chart"/></svg>物価インフレ率
+                </span>
+                <div class="switch-row__controls">
+                  <div class="switch-row__rate field__control">
+                    <input class="field__input" type="number" data-field="inflationRate" step="0.1" inputmode="decimal" aria-label="インフレ率">
+                    <span class="field__suffix">%</span>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" data-field="inflationEnabled" aria-label="インフレ率を考慮する">
+                    <span class="switch__track"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="switch-row">
+                <span class="switch-row__label">
+                  <svg class="icon text-emerald"><use href="#i-chart"/></svg>収入変動（昇給率）
+                </span>
+                <div class="switch-row__controls">
+                  <div class="switch-row__rate field__control">
+                    <input class="field__input" type="number" data-field="salaryGrowthRate" step="0.1" inputmode="decimal" aria-label="昇給率">
+                    <span class="field__suffix">%</span>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" data-field="salaryGrowthEnabled" aria-label="昇給を考慮する">
+                    <span class="switch__track"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="switch-row">
+                <span class="switch-row__label">
+                  <svg class="icon text-muted"><use href="#i-coins"/></svg>譲渡益課税 20.315%（売却時）
+                </span>
+                <div class="switch-row__controls">
+                  <label class="switch">
+                    <input type="checkbox" data-field="taxEnabled" aria-label="譲渡益課税を考慮する">
+                    <span class="switch__track"></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="switch-row">
+                <span class="switch-row__label">
+                  <svg class="icon text-emerald"><use href="#i-check"/></svg>NISAを優先的に活用（生涯1,800万）
+                </span>
+                <div class="switch-row__controls">
+                  <label class="switch">
+                    <input type="checkbox" data-field="nisaEnabled" aria-label="NISAを活用する">
+                    <span class="switch__track"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ライフイベント -->
+      <section class="card">
+        <div class="card__head">
+          <h2 class="card__title">
+            <svg class="icon" style="color:var(--indigo)"><use href="#i-calendar"/></svg>動的ライフイベント設定
+            <span class="badge badge--indigo" id="event-count">0 件</span>
+          </h2>
+          <button type="button" id="preset-btn" class="btn btn--ghost">
+            <svg class="icon"><use href="#i-wand"/></svg>定番セット
+          </button>
+        </div>
+        <div class="card__body stack-4">
+          <p class="card__note">
+            結婚・出産・車・住宅頭金などの大きな支出を設定します。指定した年に資産から一括で控除され、インフレ率に応じて費用も上昇します。
+          </p>
+
+          <div class="table-scroll">
+            <table class="event-table">
+              <thead>
+                <tr>
+                  <th scope="col">イベント名</th>
+                  <th scope="col" class="col-year">発生（年後）</th>
+                  <th scope="col" class="col-cost">費用</th>
+                  <th scope="col" class="col-action"><span class="visually-hidden">削除</span></th>
+                </tr>
+              </thead>
+              <tbody id="event-tbody"></tbody>
+            </table>
+          </div>
+
+          <button type="button" id="add-event-btn" class="btn btn--dashed">
+            <svg class="icon"><use href="#i-plus"/></svg>新しいライフイベントを追加
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ================= 右カラム: 結果 ================= -->
+    <div class="column">
+
+      <!-- KPI -->
+      <div class="kpi-grid">
+        <article class="kpi kpi--invest">
+          <p class="kpi__label"><svg class="icon"><use href="#i-coins"/></svg>年間投資可能額</p>
+          <p class="kpi__value"><span class="num" id="kpi-invest-value">—</span><span class="kpi__unit">万円 / 年</span></p>
+          <div class="kpi__meta">
+            <span>月あたり <strong class="num" id="kpi-invest-monthly">—</strong></span>
+            <span>貯蓄率 <strong class="num" id="kpi-invest-rate">—</strong></span>
+          </div>
+        </article>
+
+        <article class="kpi kpi--fire">
+          <p class="kpi__label"><svg class="icon"><use href="#i-flame"/></svg>FIRE達成予想<span id="kpi-fire-scenario" class="text-subtle"></span></p>
+          <p class="kpi__value"><span class="num" id="kpi-fire-value">—</span><span class="kpi__unit" id="kpi-fire-unit">歳</span></p>
+          <div class="kpi__meta">
+            <span id="kpi-fire-years">—</span>
+            <span>必要資産 <strong class="num" id="kpi-fire-target">—</strong></span>
+          </div>
+        </article>
+
+        <article class="kpi kpi--withdraw">
+          <p class="kpi__label"><svg class="icon"><use href="#i-hourglass"/></svg>リタイア後に使える月額</p>
+          <p class="kpi__value"><span class="num" id="kpi-withdraw-value">—</span><span class="kpi__unit">万円 / 月</span></p>
+          <div class="kpi__meta">
+            <span id="kpi-withdraw-compare">—</span>
+            <span class="text-subtle">現在価値・年金込</span>
+          </div>
+        </article>
+      </div>
+
+      <!-- 警告 -->
+      <div class="alert-stack" id="alerts" role="status" aria-live="polite"></div>
+
+      <!-- グラフ -->
+      <section class="card">
+        <div class="card__body">
+          <div class="card__head" style="padding:0 0 var(--sp-3);background:none;border-bottom:1px solid var(--border);flex-wrap:wrap">
+            <div>
+              <h2 class="card__title"><svg class="icon"><use href="#i-chart"/></svg>資産残高推移シミュレーション</h2>
+              <p class="card__note" id="chart-caption">—</p>
+            </div>
+            <div class="chart-legend" id="chart-legend"></div>
+          </div>
+          <div class="chart-frame">
+            <canvas id="asset-chart" role="img" aria-label="年齢別の資産残高推移グラフ"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- シナリオ比較 -->
+      <section class="card">
+        <div class="card__head">
+          <h2 class="card__title"><svg class="icon"><use href="#i-table"/></svg>運用利回り別 シミュレーション比較</h2>
+          <span class="card__note">標準＝入力値、堅実／積極＝±2ポイント</span>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">シナリオ</th>
+                <th scope="col">FIRE達成</th>
+                <th scope="col" class="is-numeric">必要資産</th>
+                <th scope="col" class="is-numeric">達成時の資産</th>
+                <th scope="col" class="is-numeric">リタイア後の月額<br><span class="text-subtle" style="font-weight:400">（現在価値・年金込）</span></th>
+                <th scope="col">寿命時点</th>
+              </tr>
+            </thead>
+            <tbody id="scenario-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 年次タイムライン -->
+      <section class="card">
+        <button type="button" class="collapse__trigger" id="timeline-trigger" aria-expanded="false" aria-controls="timeline-panel">
+          <span class="card__title"><svg class="icon" style="color:var(--indigo)"><use href="#i-timeline"/></svg>年次キャッシュフロー明細<span class="badge badge--muted" id="timeline-scenario">標準</span></span>
+          <span class="collapse__indicator"><span id="timeline-toggle-text">表示する</span><svg class="icon"><use href="#i-chevron"/></svg></span>
+        </button>
+        <div class="table-scroll timeline-scroll" id="timeline-panel" hidden>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">年齢</th>
+                <th scope="col">経過</th>
+                <th scope="col" class="is-numeric">収入</th>
+                <th scope="col" class="is-numeric">基本支出</th>
+                <th scope="col" class="is-numeric">イベント</th>
+                <th scope="col" class="is-numeric">収支</th>
+                <th scope="col" class="is-numeric">年末資産（時価）</th>
+                <th scope="col" class="is-numeric">年末資産（税引後）</th>
+              </tr>
+            </thead>
+            <tbody id="timeline-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 前提条件 -->
+      <section class="card">
+        <div class="card__head">
+          <h2 class="card__title"><svg class="icon"><use href="#i-info"/></svg>試算の前提</h2>
+        </div>
+        <div class="card__body">
+          <ul class="assumption-list">
+            <li><svg class="icon"><use href="#i-check"/></svg><span><strong>課税は売却時のみ</strong>。運用中は非課税で複利が働き、取り崩した金額のうち含み益に相当する部分にだけ 20.315% を課します。</span></li>
+            <li><svg class="icon"><use href="#i-check"/></svg><span><strong>NISA</strong>は生涯投資枠1,800万円・年間360万円の範囲で優先的に積み立て、非課税で運用します。</span></li>
+            <li><svg class="icon"><use href="#i-check"/></svg><span><strong>取り崩し順序</strong>は 現金 → 課税口座 → その他 → NISA。非課税の複利を最後まで温存する順序です。</span></li>
+            <li><svg class="icon"><use href="#i-check"/></svg><span><strong>FIRE達成判定</strong>は、含み益への将来の税負担を差し引いた「税引後の実質資産」で行います。</span></li>
+            <li><svg class="icon"><use href="#i-check"/></svg><span><strong>「リタイア後に使える月額」</strong>は、想定寿命の時点で資産がちょうど尽きる水準を逆算した値で、今日の物価に換算しています。</span></li>
+            <li><svg class="icon"><use href="#i-alert"/></svg><span>本ツールは概算であり、将来の運用成果・税制・社会保障制度を保証するものではありません。投資判断はご自身の責任でお願いします。</span></li>
+          </ul>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer class="app-footer">
+  入力内容はお使いのブラウザ内にのみ保存され、外部へ送信されることはありません。
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+</body>
+</html>
