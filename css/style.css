@@ -869,6 +869,86 @@ th {
   font-weight: 700;
 }
 
+/* --- モンテカルロ分析 --- */
+.mc-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+  gap: var(--sp-5);
+  align-items: start;
+}
+
+.mc-primary .kpi__value {
+  color: var(--indigo);
+}
+
+.gauge {
+  height: 8px;
+  margin-top: var(--sp-2);
+  border-radius: var(--r-full);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+
+.gauge__fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: var(--r-full);
+  background: var(--indigo);
+  transition: width var(--transition), background var(--transition);
+}
+
+.gauge__fill.is-good { background: var(--emerald); }
+.gauge__fill.is-warn { background: #d97706; }
+.gauge__fill.is-bad { background: var(--danger); }
+
+.mc-verdict {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.mc-stats {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(3, auto);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-2) var(--sp-5);
+  margin: 0;
+}
+
+.mc-stats > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding-bottom: 5px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.mc-stats dt {
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+}
+
+.mc-stats dd {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mc-help {
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-2xs);
+  line-height: 1.75;
+  color: var(--text-subtle);
+}
+
 /* --- アラート --- */
 .alert-stack {
   display: flex;
@@ -1218,6 +1298,14 @@ th {
   .asset-row,
   .asset-row__head {
     grid-template-columns: minmax(0, 1fr) 92px 74px;
+  }
+  .mc-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mc-stats {
+    grid-auto-flow: row;
+    grid-template-rows: none;
+    grid-template-columns: minmax(0, 1fr);
   }
   .brand__subtitle {
     display: none;

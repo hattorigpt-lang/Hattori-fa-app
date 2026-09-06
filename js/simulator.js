@@ -191,8 +191,11 @@ function calcFireTarget(fireType, annualExpense, effYield) {
  *
  * @param {object} p normalizeInput の戻り値
  * @param {object} cfg
- * @param {number} cfg.yieldStock       株式系の想定利回り（小数）
- * @param {number} cfg.yieldOther       その他資産の想定利回り（小数）
+ * @param {number} cfg.yieldStock       株式系の期待利回り（小数）。FIRE目標額の算定に使う
+ * @param {number} cfg.yieldOther       その他資産の期待利回り（小数）
+ * @param {(year:number)=>{stock:number,other:number}} [cfg.realizedYield]
+ *        年ごとの実現利回り。モンテカルロ分析で乱数系列を注入するための差込口。
+ *        省略時は期待利回りをそのまま毎年適用する（決定論モデル）。
  * @param {number} [cfg.startYear=0]    開始経過年
  * @param {object} [cfg.buckets]        開始時点の資産バケット（省略時は初期資産）
  * @param {object} [cfg.tracker]        NISA枠の使用状況
@@ -200,8 +203,11 @@ function calcFireTarget(fireType, annualExpense, effYield) {
  * @param {'auto'|'none'} [cfg.laborMode='auto'] 'none' は完全リタイア（労働収入ゼロ）
  * @param {boolean} [cfg.detectFire=true]  FIRE達成判定を行うか
  * @param {boolean} [cfg.collectRows=true] 年次明細を収集するか
+ * @param {(year:number, startAssets:number)=>void} [cfg.observer]
+ *        年次の期首資産だけを受け取る軽量フック。モンテカルロのように
+ *        試行回数が多い場合に、明細オブジェクトの生成コストを避けるために使う。
  */
-function project(p, cfg) {
+export function project(p, cfg) {
   const {
     yieldStock,
     yieldOther,
@@ -212,6 +218,8 @@ function project(p, cfg) {
     laborMode = 'auto',
     detectFire = true,
     collectRows = true,
+    realizedYield = null,
+    observer = null,
   } = cfg;
 
   const rows = [];
@@ -232,6 +240,7 @@ function project(p, cfg) {
 
     const startAssets = totalValue(buckets);
     const startNet = netWorth(buckets, p.taxRate);
+    if (observer) observer(year, startAssets);
 
     // --- FIRE判定（その年の期首資産で評価する） ---
     const baseExpense = (spendingReal ?? p.baseAnnualExpense) * inflationFactor;
@@ -271,7 +280,8 @@ function project(p, cfg) {
     const expenses = baseExpense + eventsCost;
 
     // --- 運用（期首資産を1年運用してから当年のキャッシュフローを充当） ---
-    grow(buckets, yieldStock, yieldOther);
+    const realized = realizedYield ? realizedYield(year) : { stock: yieldStock, other: yieldOther };
+    grow(buckets, realized.stock, realized.other);
 
     // --- キャッシュフローの充当 ---
     const netFlow = income - expenses;

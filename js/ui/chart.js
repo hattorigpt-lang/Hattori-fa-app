@@ -14,6 +14,8 @@ import { $, setText, setHtml, toggleClass } from './dom.js';
 
 let chart = null;
 let canvas = null;
+/** 凡例のクリックリスナーは1度だけ登録する（再構築のたびに重複登録しないため）。 */
+let legendBound = false;
 
 /* ------------------------------------------------------------------ */
 /* カスタムプラグイン: マイルストーンの描画                                */
@@ -119,8 +121,8 @@ function drawLabel(ctx, text, x, y, color, chartArea) {
 /* データ整形                                                           */
 /* ------------------------------------------------------------------ */
 
-function buildDatasets(result) {
-  return result.scenarios.map((scenario) => ({
+function buildDatasets(result, mc) {
+  const scenarios = result.scenarios.map((scenario) => ({
     label: `${scenario.label} ${(scenario.yieldStock * 100).toFixed(1)}%`,
     data: scenario.rows.map((row) => Math.round(row.startAssets)),
     borderColor: scenario.color,
@@ -135,6 +137,30 @@ function buildDatasets(result) {
     pointHoverBorderColor: scenario.color,
     order: scenario.key === 'standard' ? 0 : 1,
   }));
+
+  if (!mc) return scenarios;
+
+  // 10〜90%レンジ。上限線を先に置き、下限線が '-1'（直前のデータセット）まで塗りつぶす。
+  const bandStyle = {
+    borderColor: 'rgba(99, 102, 241, 0.32)',
+    borderWidth: 1,
+    borderDash: [4, 3],
+    pointRadius: 0,
+    pointHoverRadius: 0,
+    tension: 0.25,
+    order: 3,
+  };
+  return [
+    ...scenarios,
+    { ...bandStyle, label: '90パーセンタイル', data: mc.bands.map((b) => Math.round(b.p90)), fill: false },
+    {
+      ...bandStyle,
+      label: '10パーセンタイル',
+      data: mc.bands.map((b) => Math.round(b.p10)),
+      fill: '-1',
+      backgroundColor: 'rgba(99, 102, 241, 0.10)',
+    },
+  ];
 }
 
 function buildMilestones(result) {
@@ -166,31 +192,44 @@ function buildMilestones(result) {
 /* 凡例（HTML側で描画し、クリックで表示切替）                              */
 /* ------------------------------------------------------------------ */
 
-function renderLegend(result) {
+function renderLegend(result, mc) {
   const container = $('#chart-legend');
   if (!container) return;
 
-  if (container.dataset.count !== String(result.scenarios.length)) {
-    setHtml(
-      container,
-      result.scenarios
-        .map(
-          (scenario, index) => `
+  const signature = `${result.scenarios.length}:${mc ? 'band' : 'none'}`;
+  if (container.dataset.signature !== signature) {
+    const items = result.scenarios.map(
+      (scenario, index) => `
           <button type="button" class="chart-legend__item" data-dataset="${index}" aria-pressed="true">
             <span class="chart-legend__swatch" style="background:${scenario.color}"></span>
             <span data-legend-label="${index}"></span>
           </button>`,
-        )
-        .join(''),
     );
-    container.dataset.count = String(result.scenarios.length);
+    if (mc) {
+      // バンドは上限・下限の2データセットで1つの表示単位として扱う
+      items.push(`
+          <button type="button" class="chart-legend__item" data-dataset="${result.scenarios.length}"
+                  data-dataset-extra="${result.scenarios.length + 1}" aria-pressed="true">
+            <span class="chart-legend__swatch" style="background:rgba(99,102,241,0.35)"></span>
+            <span>10〜90%レンジ</span>
+          </button>`);
+    }
+    setHtml(container, items.join(''));
+    container.dataset.signature = signature;
+  }
 
+  if (!legendBound) {
+    legendBound = true;
     container.addEventListener('click', (domEvent) => {
       const button = domEvent.target.closest('[data-dataset]');
       if (!button || !chart) return;
       const index = Number(button.dataset.dataset);
       const visible = chart.isDatasetVisible(index);
       chart.setDatasetVisibility(index, !visible);
+      if (button.dataset.datasetExtra) {
+        // 分位帯は上限線と下限線の2本で1組のため、まとめて切り替える
+        chart.setDatasetVisibility(Number(button.dataset.datasetExtra), !visible);
+      }
       chart.update('none');
       toggleClass(button, 'is-hidden', visible);
       button.setAttribute('aria-pressed', String(!visible));
@@ -231,11 +270,11 @@ function showFallback(show) {
 }
 
 /** 試算結果をグラフへ反映する。初回のみインスタンスを生成し、以降は差分更新する。 */
-export function renderChart(result) {
+export function renderChart(result, mc = null) {
   if (!canvas) return;
 
   // 凡例と説明はグラフ描画の可否にかかわらず更新する
-  renderLegend(result);
+  renderLegend(result, mc);
   setText(
     $('#chart-caption'),
     '各年齢時点の資産（時価評価額）。◆はライフイベント発生年、○はFIRE達成点です。',
@@ -249,29 +288,33 @@ export function renderChart(result) {
   showFallback(false);
 
   const labels = result.standard.rows.map((row) => row.age);
-  const datasets = buildDatasets(result);
+  const datasets = buildDatasets(result, mc);
 
   if (!chart) {
     chart = new window.Chart(canvas.getContext('2d'), {
       type: 'line',
       data: { labels, datasets },
-      options: buildOptions(result),
+      options: buildOptions(result, mc),
       plugins: [milestonePlugin],
     });
   } else {
     chart.data.labels = labels;
-    chart.data.datasets.forEach((dataset, index) => {
-      Object.assign(dataset, datasets[index]);
-    });
-    chart.options = buildOptions(result);
+    if (chart.data.datasets.length === datasets.length) {
+      // 本数が同じ場合は既存オブジェクトを再利用し、内部状態の作り直しを避ける
+      chart.data.datasets.forEach((dataset, index) => Object.assign(dataset, datasets[index]));
+    } else {
+      chart.data.datasets = datasets;
+    }
+    chart.options = buildOptions(result, mc);
   }
 
   chart.$milestones = buildMilestones(result);
   chart.update('none');
 }
 
-function buildOptions(result) {
+function buildOptions(result, mc) {
   const rowsByAge = new Map(result.standard.rows.map((row) => [row.age, row]));
+  const mcBands = mc ? mc.bands : null;
 
   return {
     responsive: true,
@@ -289,8 +332,9 @@ function buildOptions(result) {
         boxPadding: 4,
         cornerRadius: 8,
         displayColors: true,
-        // 凡例と同じ「堅実→標準→積極」の順で並べる
+        // 凡例と同じ「堅実→標準→積極」の順で並べ、分位帯はツールチップから除く
         itemSort: (a, b) => a.datasetIndex - b.datasetIndex,
+        filter: (item) => !item.dataset.label.includes('パーセンタイル'),
         callbacks: {
           title: (items) => `${items[0].label} 歳`,
           label: (context) => ` ${context.dataset.label}: ${formatMan(context.parsed.y)}`,
@@ -298,6 +342,10 @@ function buildOptions(result) {
             const row = rowsByAge.get(Number(items[0].label));
             if (!row) return '';
             const lines = [];
+            if (mcBands) {
+              const band = mcBands[row.year];
+              if (band) lines.push(`10〜90%レンジ: ${formatMan(band.p10)} 〜 ${formatMan(band.p90)}`);
+            }
             if (row.eventNames.length > 0) {
               lines.push(`イベント: ${row.eventNames.join('、')} / -${formatMan(row.eventsCost)}`);
             }

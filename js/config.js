@@ -52,6 +52,23 @@ export const FIRE_TYPES = {
 /** 資産の取り崩し順序。非課税枠は複利を最大化するため最後に温存する。 */
 export const WITHDRAWAL_ORDER = ['cash', 'taxable', 'other', 'nisa'];
 
+/* --- モンテカルロ分析 --- */
+
+/** 株式の年間ボラティリティ（標準偏差）の既定値。先進国株式の長期実績に近い水準。 */
+export const DEFAULT_VOLATILITY = 18;
+
+/** その他運用資産のボラティリティは、株式に対するこの比率で設定する。 */
+export const OTHER_VOLATILITY_RATIO = 0.5;
+
+/** 乱数のシード。入力を変えていないのに結果が揺れないよう固定する。 */
+export const MONTE_CARLO_SEED = 20260101;
+
+/** 試行回数の選択肢。 */
+export const TRIAL_OPTIONS = [500, 1000, 3000];
+
+/** 分位の定義（下限・中央・上限）。 */
+export const PERCENTILES = { low: 0.1, mid: 0.5, high: 0.9 };
+
 /** localStorage の保存キー。スキーマ変更時はバージョンを上げる。 */
 export const STORAGE_KEY = 'fire-simulator:v1';
 
@@ -88,6 +105,10 @@ export const DEFAULT_STATE = Object.freeze({
   salaryGrowthRate: 1.5,
   taxEnabled: true,
   nisaEnabled: true,
+
+  monteCarloEnabled: true,
+  volatility: DEFAULT_VOLATILITY,
+  trials: 1000,
 
   events: [
     { id: 1, name: '結婚・結婚式', year: 3, cost: 400 },
@@ -126,6 +147,8 @@ export const FIELD_RULES = {
   annualVar: { min: 0, max: 10000, label: '年間変動費' },
   inflationRate: { min: -5, max: 10, label: 'インフレ率' },
   salaryGrowthRate: { min: -10, max: 10, label: '昇給率' },
+  volatility: { min: 0, max: 50, label: 'ボラティリティ' },
+  trials: { min: 100, max: 5000, integer: true, label: '試行回数' },
   eventYear: { min: 0, max: 80, integer: true, label: '発生年' },
   eventCost: { min: 0, max: 100000, label: 'イベント費用' },
 };

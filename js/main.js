@@ -8,6 +8,7 @@ import {
   getState, subscribe, replace, reset, addEvent, replaceEvents, sanitizeState,
 } from './state.js';
 import { runSimulation } from './simulator.js';
+import { runMonteCarlo } from './montecarlo.js';
 import {
   saveToStorage, loadFromStorage, loadFromUrl, stripShareParam,
   buildShareUrl, copyToClipboard, storageEnabled,
@@ -19,8 +20,12 @@ import { initEvents, renderEvents } from './ui/events.js';
 import { renderAssetSummary, renderExpenseSummary, renderKpi, renderAlerts } from './ui/kpi.js';
 import { renderScenarioTable, renderTimeline, initTimeline } from './ui/tables.js';
 import { initChart, renderChart } from './ui/chart.js';
+import { renderMonteCarlo } from './ui/montecarlo.js';
 
 let renderHandle = null;
+let latestResult = null;
+/** 直近のモンテカルロ結果。決定論の描画より重いため、別サイクルで更新する。 */
+let latestMonteCarlo = null;
 
 /* ------------------------------------------------------------------ */
 /* 描画                                                                */
@@ -41,6 +46,7 @@ function scheduleRender() {
 function render() {
   const state = getState();
   const result = runSimulation(state);
+  latestResult = result;
 
   syncInputs(state);
   renderEvents(state);
@@ -49,10 +55,41 @@ function render() {
 
   renderKpi(result);
   renderAlerts(state, result);
-  renderChart(result);
+  renderChart(result, usableMonteCarlo(state, result));
   renderScenarioTable(result);
   renderTimeline(result);
+  renderMonteCarlo(state.monteCarloEnabled ? latestMonteCarlo : null);
 }
+
+/**
+ * グラフへ渡してよいモンテカルロ結果を返す。
+ * 年齢範囲を変更した直後は帯の長さがラベル数と食い違うため、
+ * 再計算が終わるまで帯を描かない（軸のずれを防ぐ）。
+ */
+function usableMonteCarlo(state, result) {
+  if (!state.monteCarloEnabled || !latestMonteCarlo) return null;
+  return latestMonteCarlo.bands.length === result.standard.rows.length ? latestMonteCarlo : null;
+}
+
+/** モンテカルロ分析を実行し、結果カードとグラフの帯を更新する。 */
+function computeMonteCarlo() {
+  const state = getState();
+  if (!state.monteCarloEnabled) {
+    latestMonteCarlo = null;
+    renderMonteCarlo(null);
+    if (latestResult) renderChart(latestResult, null);
+    return;
+  }
+  latestMonteCarlo = runMonteCarlo(state, {
+    trials: state.trials,
+    volatility: state.volatility,
+  });
+  renderMonteCarlo(latestMonteCarlo);
+  if (latestResult) renderChart(latestResult, usableMonteCarlo(state, latestResult));
+}
+
+// 決定論の再描画より重いため、入力が落ち着いてから実行する
+const refreshMonteCarlo = debounce(computeMonteCarlo, 320);
 
 /* ------------------------------------------------------------------ */
 /* 永続化                                                              */
@@ -135,9 +172,11 @@ function boot() {
   subscribe(() => {
     scheduleRender();
     persist();
+    refreshMonteCarlo();
   });
 
   render();
+  computeMonteCarlo();
 
   // Chart.js は defer 読み込みのため、初回描画時にまだ未定義の場合がある。
   // 読み込み完了後に一度だけ再描画してグラフを確実に表示する。

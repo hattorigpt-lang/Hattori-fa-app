@@ -5,7 +5,7 @@
  * 「要素IDを1つずつ手動でキャッシュする」旧実装の冗長さと更新漏れを解消する。
  */
 
-import { FIELD_RULES, FIRE_TYPES } from '../config.js';
+import { FIELD_RULES, FIRE_TYPES, TRIAL_OPTIONS } from '../config.js';
 import { coerceField, patch, normalizeAges, getState } from '../state.js';
 import { $, $$, setText, toggleClass } from './dom.js';
 
@@ -34,13 +34,24 @@ function populateFireTypes(select) {
   });
 }
 
+/** モンテカルロの試行回数の選択肢を生成する。 */
+function populateTrialOptions(select) {
+  if (!select || select.options.length > 0) return;
+  TRIAL_OPTIONS.forEach((count) => {
+    const option = document.createElement('option');
+    option.value = String(count);
+    option.textContent = `${count.toLocaleString('ja-JP')} 回`;
+    select.appendChild(option);
+  });
+}
+
 /**
  * 入力バインディングを初期化する。
  * @param {(patchObject: object) => void} onChange 状態へ反映する際のコールバック
  */
 export function initInputs() {
-  const select = $('[data-field="fireType"]');
-  populateFireTypes(select);
+  populateFireTypes($('[data-field="fireType"]'));
+  populateTrialOptions($('[data-field="trials"]'));
 
   collectBoundElements().forEach((element) => {
     const key = element.dataset.field;
@@ -55,7 +66,9 @@ export function initInputs() {
 
     if (element.tagName === 'SELECT') {
       element.addEventListener('change', () => {
-        patch({ [key]: element.value });
+        // data-type="number" の select は数値として状態へ入れる
+        const value = element.dataset.type === 'number' ? Number(element.value) : element.value;
+        patch({ [key]: value });
       });
       return;
     }
@@ -133,6 +146,8 @@ export function syncInputs(state) {
   // インフレ／昇給の率入力は、トグルOFF時に無効化して「効いていない」ことを明示する
   toggleDependentRate('inflationRate', state.inflationEnabled);
   toggleDependentRate('salaryGrowthRate', state.salaryGrowthEnabled);
+  toggleDependentRate('volatility', state.monteCarloEnabled);
+  toggleDependentRate('trials', state.monteCarloEnabled);
 }
 
 function toggleDependentRate(key, enabled) {
